@@ -1,0 +1,12 @@
+{
+  "name": "产品原型生成器",
+  "id": "product-prototype-generator-local",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "纯本地绘制，不请求任何网络资源"
+  }
+}

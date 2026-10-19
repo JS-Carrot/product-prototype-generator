@@ -1,0 +1,11 @@
+{
+  "name": "车载数据迁移原型生成器",
+  "id": "vehicle-data-migration-generator-local",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  }
+}

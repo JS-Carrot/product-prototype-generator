@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>迁移一体机 · 车载数据迁移平台</title>
+<style>
+/* ============ 0. Token ============ */
+:root{
+  --navy:#001529; --navy-600:#12395C; --navy-700:#0B2740;
+  --page:#F0F2F5; --surface:#FFF; --border:#E8E8E8; --border-2:#F0F0F0;
+  --text:#141414; --text-2:#595959; --text-3:#8C8C8C;
+  --primary:#1677FF; --primary-h:#4096FF; --primary-bg:#E6F4FF;
+
+  /* Signature：强调橙，仅用于「进行中 / 能量/迁移」状态，不做装饰铺底 */
+  --amber:#FA8C16; --amber-bg:#FFF7E6; --amber-line:#FFD591;
+
+  --green:#52C41A; --green-bg:#F6FFED; --green-line:#B7EB8F;
+  --red:#FF4D4F; --red-bg:#FFF1F0; --red-line:#FFA39E;
+  --yellow:#FAAD14; --yellow-bg:#FFFBE6;
+
+  --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:8px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:14px;line-height:22px;color:var(--text);background:var(--page);
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+::selection{background:#BAE0FF}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.mono{font-family:var(--mono);font-size:12.5px;letter-spacing:-.2px;font-variant-numeric:tabular-nums}
+.muted{color:var(--text-3)}
+.sec{color:var(--text-2)}
+.nowrap{white-space:nowrap}
+
+/* ============ 1. Shell ============ */
+.topbar{
+  position:fixed;top:0;left:0;right:0;height:56px;z-index:60;
+  background:#fff;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;padding:0 20px;
+}
+.hamburger{display:none;width:32px;height:32px;border:1px solid var(--border);background:#fff;border-radius:6px;align-items:center;justify-content:center;cursor:pointer}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{
+  width:28px;height:28px;border-radius:6px;background:var(--primary);
+  display:grid;place-items:center;flex:none;
+}
+.brand-t{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.brand-t b{font-size:15px;font-weight:600;letter-spacing:.2px}
+.brand-t span{font-size:11px;color:var(--text-3);letter-spacing:.4px;margin-top:2px}
+
+.portal-switch{
+  display:flex;align-items:center;gap:2px;padding:2px;margin-left:8px;
+  background:#F5F5F5;border:1px solid var(--border);border-radius:6px;
+}
+.portal-switch button{
+  height:28px;padding:0 12px;border:none;background:transparent;border-radius:4px;
+  font-size:13px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;gap:6px;
+}
+.portal-switch button.on{background:#fff;color:var(--text);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.portal-switch button.on svg{color:var(--primary)}
+.topbar .spacer{flex:1}
+.topbar .env{
+  display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 8px;
+  border:1px solid var(--border);border-radius:4px;font-size:12px;color:var(--text-2);background:#FAFAFA;
+}
+.topbar .env i{width:5px;height:5px;border-radius:50%;background:var(--green);display:block}
+.icon-btn{
+  width:32px;height:32px;border:none;background:transparent;border-radius:6px;
+  display:grid;place-items:center;color:var(--text-2);cursor:pointer;position:relative;
+}
+.icon-btn:hover{background:#F5F5F5;color:var(--text)}
+.icon-btn b{
+  position:absolute;top:3px;right:2px;min-width:14px;height:14px;border-radius:7px;
+  background:var(--red);color:#fff;font-size:10px;line-height:14px;font-weight:500;padding:0 3px;
+}
+.avatar{
+  width:28px;height:28px;border-radius:50%;background:#E6F4FF;color:var(--primary);
+  display:grid;place-items:center;font-size:12px;font-weight:600;flex:none;
+}
+
+.sidebar{
+  position:fixed;top:56px;left:0;bottom:0;width:208px;z-index:50;
+  background:var(--navy);display:flex;flex-direction:column;overflow-y:auto;
+}
+.nav-sec{padding:18px 16px 6px;font-size:11px;color:rgba(255,255,255,.32);letter-spacing:.08em}
+.nav-item{
+  display:flex;align-items:center;gap:10px;height:40px;padding:0 14px;margin:2px 8px;
+  border-radius:6px;color:rgba(255,255,255,.66);font-size:13px;cursor:pointer;
+  position:relative;transition:background .12s;
+}
+.nav-item svg{flex:none;opacity:.85}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-item.on{background:var(--navy-600);color:#fff;font-weight:500}
+.nav-item.on::before{
+  content:"";position:absolute;left:-8px;top:11px;bottom:11px;width:2px;
+  background:var(--amber);border-radius:0 2px 2px 0;
+}
+.nav-item.on svg{color:#fff;opacity:1}
+.nav-item .n-badge{
+  margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:9px;
+  background:var(--red);color:#fff;font-size:11px;line-height:18px;text-align:center;font-family:var(--mono);
+}
+.side-foot{margin-top:auto;padding:14px 16px;border-top:1px solid rgba(255,255,255,.08)}
+.side-user{display:flex;align-items:center;gap:10px}
+.side-user .avatar{background:rgba(255,255,255,.12);color:#fff}
+.side-user .u-t{line-height:1.3;min-width:0}
+.side-user .u-t b{display:block;font-size:12.5px;color:#fff;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-user .u-t span{font-size:11px;color:rgba(255,255,255,.42)}
+
+.main{margin-left:208px;padding-top:56px;min-height:100vh}
+.main-inner{padding:20px 24px 48px;max-width:1440px}
+.scrim{display:none;position:fixed;inset:56px 0 0 0;background:rgba(0,0,0,.4);z-index:45}
+
+/* ============ 2. Common ============ */
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.crumb{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3);margin-bottom:8px}
+.crumb a{cursor:pointer}
+.crumb a:hover{color:var(--primary)}
+.page-title{margin:0;font-size:20px;font-weight:600;line-height:28px;letter-spacing:-.2px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.page-sub{font-size:13px;color:var(--text-3);margin-top:4px}
+.head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+.btn{
+  height:32px;padding:0 14px;border-radius:6px;border:1px solid #D9D9D9;background:#fff;
+  font-size:13px;color:var(--text);cursor:pointer;display:inline-flex;align-items:center;
+  justify-content:center;gap:6px;white-space:nowrap;transition:all .12s;
+}
+.btn:hover{border-color:var(--primary);color:var(--primary)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-h);border-color:var(--primary-h);color:#fff}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--text-2);padding:0 8px}
+.btn-ghost:hover{background:#F5F5F5;color:var(--primary)}
+.btn-danger{color:var(--red);border-color:#FFCCC7}
+.btn-danger:hover{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+.btn-sm{height:28px;padding:0 10px;font-size:12px}
+.btn:disabled,.btn[disabled]{opacity:.45;cursor:not-allowed;pointer-events:none}
+.link{color:var(--primary);cursor:pointer;font-size:13px}
+.link:hover{color:var(--primary-h);text-decoration:underline}
+
+.pill{
+  display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:4px;
+  font-size:12px;line-height:1;white-space:nowrap;border:1px solid transparent;
+}
+.pill i{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+.pill-blue{background:var(--primary-bg);color:#0958D9;border-color:#91CAFF}
+.pill-green{background:var(--green-bg);color:#389E0D;border-color:var(--green-line)}
+.pill-amber{background:var(--amber-bg);color:#D46B08;border-color:var(--amber-line)}
+.pill-red{background:var(--red-bg);color:#CF1322;border-color:var(--red-line)}
+.pill-gray{background:#FAFAFA;color:#8C8C8C;border-color:var(--border)}
+
+.panel{background:#fff;border:1px solid var(--border);border-radius:var(--r)}
+.panel + .panel{margin-top:16px}
+.panel-head{min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px;border-bottom:1px solid var(--border-2)}
+.panel-title{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.panel-title .cnt{font-size:12px;color:var(--text-3);font-weight:400}
+.panel-body{padding:18px}
+.panel-body.tight{padding:0}
+
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;position:relative;overflow:hidden}
+.kpi-k{font-size:13px;color:var(--text-2);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.kpi-v{font-size:24px;font-weight:600;line-height:32px;margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.kpi-v small{font-size:13px;font-weight:400;color:var(--text-3);margin-left:4px;letter-spacing:0}
+.kpi-f{font-size:12px;color:var(--text-3);margin-top:4px;display:flex;align-items:center;gap:6px}
+.spark{display:block;margin-top:8px}
+
+/* table */
+.tbl-scroll{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{
+  height:44px;text-align:left;font-weight:400;color:var(--text-3);font-size:12px;
+  background:#FAFAFA;padding:0 14px;border-bottom:1px solid var(--border);white-space:nowrap;
+}
+.tbl td{height:52px;padding:0 14px;border-bottom:1px solid var(--border-2);vertical-align:middle}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover{background:#FAFBFC}
+.tbl .cell-main{font-size:13px}
+.tbl .cell-sub{font-size:12px;color:var(--text-3);margin-top:2px}
+.tbl .ops{display:flex;align-items:center;gap:12px}
+.tbl .ops .link{font-size:12px}
+.tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+
+.filterbar{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.filterbar .grow{flex:1}
+.chips{display:flex;gap:2px;background:#F5F5F5;padding:3px;border-radius:6px;flex-wrap:wrap}
+.chip{
+  height:26px;padding:0 12px;border-radius:4px;font-size:13px;color:var(--text-2);
+  cursor:pointer;display:flex;align-items:center;gap:6px;border:none;background:transparent;
+}
+.chip:hover{color:var(--text)}
+.chip.on{background:#fff;color:var(--text);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.chip b{font-weight:400;color:var(--text-3);font-size:12px;font-family:var(--mono)}
+.chip.on b{color:var(--primary)}
+
+.input,.select{
+  height:32px;border:1px solid #D9D9D9;border-radius:6px;padding:0 10px;font-size:13px;
+  font-family:inherit;color:var(--text);background:#fff;outline:none;min-width:0;
+}
+.input::placeholder{color:#BFBFBF}
+.input:focus,.select:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(22,119,255,.1)}
+.select{padding-right:26px;appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%238C8C8C' fill='none' stroke-width='1.4'/></svg>");background-repeat:no-repeat;background-position:right 10px center}
+.search{position:relative;display:inline-flex}
+.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#BFBFBF;pointer-events:none}
+.search .input{padding-left:30px;width:230px}
+
+.tbl-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text-3);flex-wrap:wrap}
+.pager{display:flex;align-items:center;gap:4px}
+.pager button{min-width:28px;height:28px;border:1px solid var(--border);background:#fff;border-radius:4px;font-size:12px;color:var(--text-2);cursor:pointer;font-family:var(--mono)}
+.pager button.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.pager button:disabled{opacity:.4;cursor:not-allowed}
+
+/* progress */
+.bar{height:4px;background:#F0F0F0;border-radius:2px;overflow:hidden;min-width:56px}
+.bar>i{display:block;height:100%;background:var(--primary);border-radius:2px;transition:width .3s}
+.bar.amber>i{background:var(--amber)}
+.bar.green>i{background:var(--green)}
+.bar-row{display:flex;align-items:center;gap:8px}
+.bar-row .pc{font-size:12px;color:var(--text-2);font-family:var(--mono);min-width:32px;text-align:right}
+
+/* lifecycle rail — Signature */
+.rail{display:flex;align-items:flex-start}
+.rail-step{flex:1;position:relative;min-width:0;padding-right:8px}
+.rail-step::before{
+  content:"";position:absolute;left:13px;right:-13px;top:5px;height:2px;background:#F0F0F0;z-index:0;
+}
+.rail-step:last-child::before{display:none}
+.rail-step.done::before{background:var(--primary)}
+.rail-step.active::before{background:linear-gradient(90deg,var(--primary),#F0F0F0)}
+.rail-dot{
+  width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #D9D9D9;
+  position:relative;z-index:1;display:grid;place-items:center;
+}
+.rail-step.done .rail-dot{background:var(--primary);border-color:var(--primary)}
+.rail-step.active .rail-dot{border-color:var(--amber);background:#fff}
+.rail-step.active .rail-dot::after{
+  content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--amber);opacity:.5;
+  animation:ripple 2.2s ease-out infinite;
+}
+@keyframes ripple{0%{transform:scale(.7);opacity:.6}70%{transform:scale(1.35);opacity:0}100%{opacity:0}}
+.rail-lab{font-size:13px;color:var(--text-3);margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-step.done .rail-lab,.rail-step.active .rail-lab{color:var(--text)}
+.rail-step.active .rail-lab{font-weight:500;color:#D46B08}
+.rail-time{font-size:11.5px;color:#BFBFBF;font-family:var(--mono);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail.dense .rail-lab{font-size:12px}
+.rail.dense .rail-time{font-size:11px}
+
+/* tabs */
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);padding:0 18px;overflow-x:auto}
+.tab{
+  height:44px;display:flex;align-items:center;font-size:14px;color:var(--text-2);
+  cursor:pointer;position:relative;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;
+}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:500}
+.tab b{font-weight:400;color:var(--text-3);margin-left:6px;font-family:var(--mono);font-size:12px}
+
+/* definition list */
+.dl{display:grid;grid-template-columns:96px 1fr;row-gap:12px;column-gap:12px;font-size:13px}
+.dl dt{color:var(--text-3);margin:0}
+.dl dd{margin:0;color:var(--text);word-break:break-word}
+.dl.two{grid-template-columns:1fr 1fr 1fr 1fr}
+
+/* timeline */
+.tl{padding-left:18px;position:relative}
+.tl-item{position:relative;padding-bottom:16px;font-size:13px}
+.tl-item:last-child{padding-bottom:0}
+.tl-item::before{content:"";position:absolute;left:-14px;top:5px;width:7px;height:7px;border-radius:50%;background:#D9D9D9;z-index:1}
+.tl-item:not(:last-child)::after{content:"";position:absolute;left:-11px;top:13px;bottom:0;width:1px;background:var(--border)}
+.tl-item.hl::before{background:var(--primary);box-shadow:0 0 0 3px var(--primary-bg)}
+.tl-t{font-size:12.5px;color:var(--text)}
+.tl-m{font-size:11.5px;color:var(--text-3);font-family:var(--mono);margin-top:2px}
+
+/* metrics strip (详情页指标，非 KPI 墙) */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);border-radius:var(--r);background:#fff;overflow:hidden}
+.metric{padding:14px 16px;border-right:1px solid var(--border-2);min-width:0}
+.metric:last-child{border-right:none}
+.metrics.five{grid-template-columns:1.15fr .8fr .9fr 1.1fr 1.1fr}
+.metric-k{font-size:12px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.metric-v{font-size:18px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+.metric-v small{font-size:12px;font-weight:400;color:var(--text-3);margin-left:3px}
+
+/* notice */
+.notice{display:flex;gap:10px;padding:12px 14px;border-radius:6px;font-size:13px;line-height:20px;border:1px solid}
+.notice svg{flex:none;margin-top:2px}
+.notice-info{background:#F7FBFF;border-color:#91CAFF;color:#0958D9}
+.notice-amber{background:var(--amber-bg);border-color:var(--amber-line);color:#AD4E00}
+.notice-gray{background:#FAFAFA;border-color:var(--border);color:var(--text-2)}
+
+/* wizard */
+.wizard{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+.steps{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-3)}
+.step-n{width:22px;height:22px;border-radius:50%;border:1px solid #D9D9D9;display:grid;place-items:center;font-size:12px;font-family:var(--mono);background:#fff;flex:none}
+.step.on{color:var(--text);font-weight:500}
+.step.on .step-n{background:var(--primary);border-color:var(--primary);color:#fff}
+.step.done .step-n{background:var(--primary-bg);border-color:#91CAFF;color:var(--primary)}
+.step.done{color:var(--text-2)}
+.step-line{flex:1;min-width:16px;height:1px;background:var(--border)}
+.form-sec{margin-bottom:24px}
+.form-sec:last-child{margin-bottom:0}
+.form-sec-t{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.form-sec-t span{font-size:12px;color:var(--text-3);font-weight:400}
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field>label{display:block;font-size:13px;color:var(--text-2);margin-bottom:6px}
+.field .hint{font-size:12px;color:var(--text-3);margin-top:5px}
+.field .input,.field .select{width:100%;height:34px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.opt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.opt{
+  border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;background:#fff;
+  position:relative;transition:.12s;
+}
+.opt:hover{border-color:#91CAFF}
+.opt.on{border-color:var(--primary);background:#F7FBFF;box-shadow:inset 0 0 0 1px var(--primary)}
+.opt-n{font-size:14px;font-weight:600;padding-right:20px}
+.opt-c{font-size:12px;color:var(--text-3);margin-top:4px}
+.opt-p{font-size:13px;color:var(--primary);font-weight:600;margin-top:10px;font-variant-numeric:tabular-nums}
+.opt-check{
+  position:absolute;top:12px;right:12px;width:14px;height:14px;border-radius:50%;border:1px solid #D9D9D9;background:#fff;
+}
+.opt.on .opt-check{border:4px solid var(--primary)}
+.stepper{display:inline-flex;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;height:34px;background:#fff}
+.stepper button{width:34px;border:none;background:#fff;cursor:pointer;font-size:16px;color:var(--text-2);line-height:1}
+.stepper button:hover{background:#F5F5F5;color:var(--primary)}
+.stepper input{width:52px;border:none;border-left:1px solid var(--border);border-right:1px solid var(--border);text-align:center;font-family:var(--mono);font-size:13px;outline:none;color:var(--text)}
+.summary{position:sticky;top:76px}
+.summary .panel-body{padding:16px 18px}
+.sum-line{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;padding:7px 0;color:var(--text-2)}
+.sum-line b{font-weight:500;color:var(--text);font-variant-numeric:tabular-nums}
+.sum-total{border-top:1px dashed var(--border);margin-top:8px;padding-top:12px;display:flex;align-items:baseline;justify-content:space-between}
+.sum-total span{font-size:13px;color:var(--text-2)}
+.sum-total b{font-size:20px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+.wiz-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border-2)}
+.radio-line{display:flex;gap:18px;flex-wrap:wrap;padding-top:2px}
+.radio{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text);cursor:pointer}
+.radio i{width:14px;height:14px;border-radius:50%;border:1px solid #D9D9D9;background:#fff;position:relative;flex:none}
+.radio.on i{border:4px solid var(--primary)}
+.check{display:inline-flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text-2);cursor:pointer;line-height:20px}
+.check i{width:15px;height:15px;border-radius:3px;border:1px solid #D9D9D9;background:#fff;flex:none;margin-top:2px;display:grid;place-items:center}
+.check.on i{background:var(--primary);border-color:var(--primary)}
+.check.on i::after{content:"";width:7px;height:4px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translateY(-1px)}
+
+/* detail layout */
+.detail-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.side-card .panel-head{min-height:46px;padding:0 16px}
+.side-card .panel-body{padding:14px 16px}
+
+/* order card on dashboard */
+.oc{border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;background:#fff}
+.oc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.oc-id{font-family:var(--mono);font-size:13px;color:var(--text);cursor:pointer}
+.oc-id:hover{color:var(--primary)}
+.oc-meta{display:flex;gap:20px;flex-wrap:wrap;font-size:12.5px;color:var(--text-3);margin-top:6px}
+.oc-rail{margin-top:18px}
+.oc-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-2);font-size:12.5px;color:var(--text-3);flex-wrap:wrap}
+
+/* todo list */
+.todo{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--border-2);cursor:pointer}
+.todo:last-child{border-bottom:none}
+.todo:hover{background:#FAFBFC}
+.todo-ic{width:30px;height:30px;border-radius:6px;display:grid;place-items:center;flex:none}
+.todo-b{flex:1;min-width:0}
+.todo-t{font-size:13px;color:var(--text)}
+.todo-s{font-size:12px;color:var(--text-3);margin-top:2px}
+.todo-n{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text)}
+.todo-go{color:#BFBFBF}
+
+/* empty */
+.empty{padding:48px 20px;text-align:center;color:var(--text-3);font-size:13px}
+.empty b{display:block;color:var(--text-2);font-size:14px;font-weight:500;margin-bottom:6px}
+.empty .btn{margin-top:14px}
+
+/* modal */
+.mask{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:120;
+  display:none;align-items:flex-start;justify-content:center;padding:64px 20px 40px;overflow:auto;
+}
+.mask.on{display:flex}
+.modal{background:#fff;border-radius:var(--r);width:560px;max-width:100%;animation:pop .14s ease-out}
+.modal.wide{width:720px}
+@keyframes pop{from{transform:translateY(-6px);opacity:.6}to{transform:none;opacity:1}}
+.modal-head{height:54px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 20px;border-bottom:1px solid var(--border-2);font-size:16px;font-weight:600}
+.modal-head .x{border:none;background:transparent;cursor:pointer;color:var(--text-3);width:28px;height:28px;border-radius:4px;display:grid;place-items:center}
+.modal-head .x:hover{background:#F5F5F5;color:var(--text)}
+.modal-body{padding:20px;font-size:13px;line-height:22px}
+.modal-foot{padding:12px 20px;border-top:1px solid var(--border-2);display:flex;justify-content:flex-end;gap:8px;background:#FAFAFA;border-radius:0 0 var(--r) var(--r);flex-wrap:wrap}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;top:72px;transform:translate(-50%,-10px);z-index:200;
+  background:#141414;color:#fff;padding:9px 16px;border-radius:6px;font-size:13px;
+  display:flex;align-items:center;gap:8px;opacity:0;pointer-events:none;transition:.18s;
+  box-shadow:0 4px 16px rgba(0,0,0,.18);max-width:calc(100vw - 32px);
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast svg{color:#52C41A;flex:none}
+
+/* device drawer detail bits */
+.dev-head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.dev-ic{width:44px;height:44px;border-radius:8px;background:#F5F7FA;display:grid;place-items:center;color:var(--text-2);flex:none;border:1px solid var(--border)}
+.hero-num{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.4px}
+.tag{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:3px;font-size:11px;background:#F5F5F5;color:var(--text-2);border:1px solid var(--border)}
+
+/* inventory checkbox */
+.cb{width:15px;height:15px;border:1px solid #D9D9D9;border-radius:3px;background:#fff;display:inline-grid;place-items:center;cursor:pointer;vertical-align:middle}
+.cb.on{background:var(--primary);border-color:var(--primary)}
+.cb.on::after{content:"";width:7px;height:4px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translateY(-1px)}
+tr.sel td{background:#F7FBFF}
+.batchbar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#F7FBFF;border-bottom:1px solid #91CAFF;font-size:13px;color:#0958D9;flex-wrap:wrap}
+
+/* chart */
+.chart-box{padding:8px 0 0}
+.chart-legend{display:flex;gap:16px;font-size:12px;color:var(--text-3);margin-top:8px}
+.chart-legend i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:5px}
+
+/* warehouse rows */
+.wh-row{display:grid;grid-template-columns:1.2fr .8fr .8fr .8fr 1.4fr;gap:12px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border-2);font-size:13px}
+.wh-row:last-child{border-bottom:none}
+.wh-row.h{background:#FAFAFA;font-size:12px;color:var(--text-3);padding:9px 18px}
+
+/* ============ 3. Responsive ============ */
+@media (max-width:1180px){
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .wizard{grid-template-columns:minmax(0,1fr)}
+  .summary{position:static}
+  .detail-grid{grid-template-columns:minmax(0,1fr)}
+  .opt-grid{grid-template-columns:1fr}
+}
+@media (max-width:900px){
+  .hamburger{display:flex}
+  .sidebar{transform:translateX(-100%);transition:transform .2s}
+  .app.nav-open .sidebar{transform:translateX(0)}
+  .app.nav-open .scrim{display:block}
+  .main{margin-left:0}
+  .main-inner{padding:16px 14px 40px}
+  .metrics{grid-template-columns:1fr 1fr}
+  .metric:nth-child(2){border-right:none}
+  .metric:nth-child(1),.metric:nth-child(2){border-bottom:1px solid var(--border-2)}
+  .brand-t span{display:none}
+  .portal-switch{margin-left:0}
+  .portal-switch button{padding:0 9px;font-size:12px}
+  .topbar{gap:10px;padding:0 12px}
+  .topbar .env{display:none}
+}
+@media (max-width:720px){
+  .kpi-row{grid-template-columns:1fr}
+  .field-row{grid-template-columns:1fr}
+  .filterbar{padding:10px 12px;gap:8px}
+  .search .input{width:100%}
+  .search{flex:1}
+  .tbl{min-width:0}
+  .tbl thead{display:none}
+  .tbl tbody tr{display:block;padding:10px 0;border-bottom:1px solid var(--border)}
+  .tbl tbody tr:last-child{border-bottom:none}
+  .tbl td{display:flex;justify-content:space-between;align-items:center;gap:14px;height:auto;padding:5px 14px;border:none;text-align:left!important}
+  .tbl td::before{content:attr(data-l);color:var(--text-3);font-size:12px;flex:none}
+  .tbl td:first-child{padding-top:2px}
+  .tbl td .cell-sub{display:none}
+  .tbl .ops{justify-content:flex-end;flex-wrap:wrap}
+  .tbl td.no-l::before{display:none}
+  .tbl td>span.mono{flex:1;min-width:0;text-align:right;overflow-wrap:anywhere}
+  .tbl td>div.cell-main{flex:1;min-width:0;text-align:right}
+  .page-title{font-size:18px}
+  .panel-body{padding:14px}
+  .dl{grid-template-columns:84px 1fr}
+  .rail-lab{font-size:11.5px}
+  .rail-time{display:none}
+  .wh-row{grid-template-columns:1fr 1fr;row-gap:6px}
+  .wh-row.h{display:none}
+  .oc-meta{gap:10px 16px}
+  .page-head{gap:10px}
+  .head-actions .btn{flex:1}
+  .tabs{gap:18px;padding:0 12px}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="hamburger" data-act="toggle-nav" aria-label="打开导航">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+  </button>
+  <div class="brand">
+    <span class="logo">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M13.2 1.8 4.4 13.6h5.4l-1.2 8.6 9.2-12.2h-5.6l1-8.2Z" fill="#fff"/></svg>
+    </span>
+    <span class="brand-t"><b>数据迁移平台</b><span>车载数据回传 · 设备租赁</span></span>
+  </div>
+
+  <div class="portal-switch" role="tablist" aria-label="视角切换">
+    <button data-act="portal" data-p="client" class="on" role="tab">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5v-9Z" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M6 6v8" stroke="currentColor" stroke-width="1.3"/></svg>
+      客户控制台
+    </button>
+    <button data-act="portal" data-p="ops" role="tab">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 5.5 8 2l6 3.5v5L8 14l-6-3.5v-5Z" stroke="currentColor" stroke-width="1.3"/><path d="M2 5.5 8 9l6-3.5M8 9v5" stroke="currentColor" stroke-width="1.3"/></svg>
+      运维后台
+    </button>
+  </div>
+
+  <span class="spacer"></span>
+  <span class="env"><i></i>生产环境</span>
+  <button class="icon-btn" data-act="help" aria-label="帮助">
+    <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.3"/><path d="M7.2 7.1a1.9 1.9 0 1 1 2.4 1.9c-.4.1-.6.5-.6.9v.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="9" cy="12.7" r=".8" fill="currentColor"/></svg>
+  </button>
+  <div class="avatar" id="topAvatar">周</div>
+</header>
+
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main"><div class="main-inner" id="view"></div></main>
+<div class="scrim" data-act="toggle-nav"></div>
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= 数据层 ================= */
+const MODELS = {
+  M3:{name:'迁移一体机 M3',cap:48,rent:60,desc:'便携单机 · 20–50 TB 单站点回传'},
+  M5:{name:'迁移一体机 M5',cap:96,rent:110,desc:'双节点 · 50–100 TB 批量回传'},
+  L2:{name:'车载迁移一体机 L2',cap:200,rent:260,desc:'车载加固 · 边采边传，200 TB'}
+};
+const OS = {
+  pending:{lab:'待确认',tone:'amber',hint:'订单已提交，等待运维受理（预计 2 小时内）'},
+  shipping:{lab:'运输中',tone:'blue',hint:'设备已发出，签收后请点击「确认收货」开始迁移'},
+  using:{lab:'使用中',tone:'green',hint:'数据迁移进行中，请在租期结束前申请归还'},
+  returning:{lab:'归还中',tone:'amber',hint:'设备已寄出，等待运维入库检测，检测通过后订单完成'},
+  completed:{lab:'已完成',tone:'gray',hint:'设备已入库，订单已关闭'},
+  cancelled:{lab:'已取消',tone:'gray',hint:'订单已取消，未产生费用'}
+};
+const DS = {
+  stock:{lab:'在库可用',tone:'green'},
+  offshelf:{lab:'已下架',tone:'gray'},
+  locked:{lab:'已锁定',tone:'blue'},
+  shipping:{lab:'在途',tone:'blue'},
+  in_use:{lab:'使用中',tone:'green'},
+  returning:{lab:'待入库',tone:'amber'},
+  inspecting:{lab:'检测中',tone:'amber'},
+  repair:{lab:'维修中',tone:'red'},
+  scrapped:{lab:'已报废',tone:'gray'}
+};
+const RAIL = [
+  {lab:'提交订单',key:'createdAt'},
+  {lab:'受理发货',key:'shippedAt'},
+  {lab:'确认收货',key:'confirmedAt'},
+  {lab:'归还中',key:'returnAt'},
+  {lab:'已完成',key:'completedAt'}
+];
+const RAIL_IDX = {pending:0,shipping:1,using:2,returning:3,completed:4};
+
+const DB = {
+  user:{name:'周明',org:'示例科技有限公司',role:'企业管理员',phone:'138****6621'},
+  opsUser:{name:'张磊',org:'华东设备运营组',role:'运维工程师'},
+  orders:[
+    {id:'DM-20261018-0094',model:'M3',qty:2,status:'pending',createdAt:'2026-10-18 17:02',shippedAt:null,confirmedAt:null,returnAt:null,completedAt:null,
+     dueAt:'2026-11-17',site:'上海 · 临港数据中心 B3',project:'智驾路测数据回传',dataSize:36,source:'车载采集硬盘',region:'华东2（上海）',contact:'周明',phone:'138****6621',amount:4520,
+     devices:['DM3-2402-0174','DM3-2402-0175']},
+    {id:'DM-20261016-0091',model:'M3',qty:1,status:'shipping',createdAt:'2026-10-16 15:40',shippedAt:'2026-10-17 09:20',confirmedAt:null,returnAt:null,completedAt:null,
+     dueAt:'2026-11-15',site:'苏州 · 相城研发中心',project:'路侧感知数据归档',dataSize:18,source:'NAS 存储',region:'华东1（杭州）',contact:'周明',phone:'138****6621',amount:2360,
+     devices:['DM3-2402-0161']},
+    {id:'DM-20261012-0086',model:'M5',qty:2,status:'using',createdAt:'2026-10-12 10:24',shippedAt:'2026-10-13 08:00',confirmedAt:'2026-10-14 09:10',returnAt:null,completedAt:null,
+     dueAt:'2026-11-11',site:'杭州 · 滨江数据中心 A1',project:'车联网路测数据回传',dataSize:86,source:'车载采集硬盘',region:'华东1（杭州）',contact:'周明',phone:'138****6621',amount:11460,
+     devices:['DM5-2401-0087','DM5-2401-0088']},
+    {id:'DM-20261008-0072',model:'L2',qty:1,status:'returning',createdAt:'2026-10-08 09:12',shippedAt:'2026-10-08 16:30',confirmedAt:'2026-10-09 11:05',returnAt:'2026-10-18 14:20',completedAt:null,
+     dueAt:'2026-11-06',site:'宁波 · 前湾测试场',project:'整车路采数据迁移',dataSize:142,source:'车载采集硬盘',region:'华东2（上海）',contact:'周明',phone:'138****6621',amount:12840,
+     devices:['DM2-2401-0023']},
+    {id:'DM-20260921-0058',model:'M3',qty:3,status:'completed',createdAt:'2026-09-21 14:05',shippedAt:'2026-09-22 10:00',confirmedAt:'2026-09-23 09:30',returnAt:'2026-10-04 16:00',completedAt:'2026-10-06 10:15',
+     dueAt:'2026-10-21',site:'上海 · 嘉定数据中心',project:'高精地图原始数据归档',dataSize:104,source:'NAS 存储',region:'华东2（上海）',contact:'周明',phone:'138****6621',amount:9780,
+     devices:['DM3-2402-0121','DM3-2402-0122','DM3-2402-0123']},
+    {id:'DM-20260915-0041',model:'M5',qty:1,status:'cancelled',createdAt:'2026-09-15 11:20',shippedAt:null,confirmedAt:null,returnAt:null,completedAt:null,
+     dueAt:'2026-10-15',site:'合肥 · 研发中心',project:'临时迁移验证',dataSize:8,source:'本地磁盘',region:'华东1（杭州）',contact:'周明',phone:'138****6621',amount:0,
+     devices:[]}
+  ],
+  devices:[
+    // 0094 待确认（已锁定）
+    {sn:'DM3-2402-0174',model:'M3',status:'locked',wh:'杭州仓',fw:'3.8.2',used:0,cap:48,order:'DM-20261018-0094',hb:'2026-10-19 16:10',site:'杭州仓',since:'2026-08-14',temp:26,rate:0},
+    {sn:'DM3-2402-0175',model:'M3',status:'locked',wh:'杭州仓',fw:'3.8.2',used:0,cap:48,order:'DM-20261018-0094',hb:'2026-10-19 16:10',site:'杭州仓',since:'2026-08-14',temp:26,rate:0},
+    // 0091 在途
+    {sn:'DM3-2402-0161',model:'M3',status:'shipping',wh:'杭州仓',fw:'3.8.2',used:0,cap:48,order:'DM-20261016-0091',hb:'2026-10-19 15:42',site:'杭州 → 苏州',since:'2026-07-02',temp:22,rate:0},
+    // 0086 使用中
+    {sn:'DM5-2401-0087',model:'M5',status:'in_use',wh:'杭州仓',fw:'4.1.0',used:29.6,cap:96,order:'DM-20261012-0086',hb:'2026-10-19 16:22',site:'杭州 · 滨江 A1',since:'2026-10-14',temp:41,rate:1.24},
+    {sn:'DM5-2401-0088',model:'M5',status:'in_use',wh:'杭州仓',fw:'4.1.0',used:27.2,cap:96,order:'DM-20261012-0086',hb:'2026-10-19 16:20',site:'杭州 · 滨江 A1',since:'2026-10-14',temp:39,rate:1.18},
+    // 0072 待入库
+    {sn:'DM2-2401-0023',model:'L2',status:'returning',wh:'杭州仓',fw:'2.9.4',used:142,cap:200,order:'DM-20261008-0072',hb:'2026-10-18 14:02',site:'运输中 → 杭州仓',since:'2026-10-09',temp:24,rate:0},
+    // 0058 已完成，已回库
+    {sn:'DM3-2402-0121',model:'M3',status:'stock',wh:'杭州仓',fw:'3.8.2',used:0,cap:48,order:null,hb:'2026-10-06 10:10',site:'杭州仓',since:'2026-10-06',temp:23,rate:0},
+    {sn:'DM3-2402-0122',model:'M3',status:'stock',wh:'杭州仓',fw:'3.8.2',used:0,cap:48,order:null,hb:'2026-10-06 10:10',site:'杭州仓',since:'2026-10-06',temp:23,rate:0},
+    {sn:'DM3-2402-0123',model:'M3',status:'stock',wh:'上海仓',fw:'3.8.1',used:0,cap:48,order:null,hb:'2026-10-06 10:12',site:'上海仓',since:'2026-10-06',temp:23,rate:0},
+    // 杭州仓库存
+    {sn:'DM3-2402-0162',model:'M3',status:'stock',wh:'杭州仓',fw:'3.8.2',used:0,cap:48,order:null,hb:'2026-10-19 16:18',site:'杭州仓',since:'2026-03-11',temp:24,rate:0},
+    {sn:'DM3-2402-0163',model:'M3',status:'stock',wh:'杭州仓',fw:'3.8.2',used:0,cap:48,order:null,hb:'2026-10-19 16:18',site:'杭州仓',since:'2026-03-11',temp:24,rate:0},
+    {sn:'DM3-2402-0164',model:'M3',status:'offshelf',wh:'杭州仓',fw:'3.7.6',used:0,cap:48,order:null,hb:'2026-09-28 10:02',site:'杭州仓',since:'2026-01-20',temp:22,rate:0},
+    {sn:'DM5-2401-0089',model:'M5',status:'stock',wh:'杭州仓',fw:'4.1.0',used:0,cap:96,order:null,hb:'2026-10-19 16:18',site:'杭州仓',since:'2026-05-09',temp:25,rate:0},
+    {sn:'DM5-2401-0090',model:'M5',status:'repair',wh:'杭州仓',fw:'4.1.0',used:0,cap:96,order:null,hb:'2026-10-11 08:30',site:'杭州仓 · 维修区',since:'2026-05-09',temp:0,rate:0},
+    // 上海仓库存
+    {sn:'DM3-2402-0170',model:'M3',status:'stock',wh:'上海仓',fw:'3.8.2',used:0,cap:48,order:null,hb:'2026-10-19 16:17',site:'上海仓',since:'2026-04-02',temp:24,rate:0},
+    {sn:'DM3-2402-0171',model:'M3',status:'stock',wh:'上海仓',fw:'3.8.2',used:0,cap:48,order:null,hb:'2026-10-19 16:17',site:'上海仓',since:'2026-04-02',temp:24,rate:0},
+    {sn:'DM2-2401-0028',model:'L2',status:'stock',wh:'上海仓',fw:'2.9.4',used:0,cap:200,order:null,hb:'2026-10-19 16:12',site:'上海仓',since:'2026-02-18',temp:25,rate:0},
+    {sn:'DM2-2401-0029',model:'L2',status:'offshelf',wh:'上海仓',fw:'2.9.1',used:0,cap:200,order:null,hb:'2026-09-30 09:40',site:'上海仓',since:'2026-02-18',temp:22,rate:0},
+    // 广州仓
+    {sn:'DM5-2401-0091',model:'M5',status:'stock',wh:'广州仓',fw:'4.1.0',used:0,cap:96,order:null,hb:'2026-10-19 16:15',site:'广州仓',since:'2026-06-21',temp:27,rate:0},
+    {sn:'DM3-2402-0180',model:'M3',status:'scrapped',wh:'广州仓',fw:'3.5.2',used:0,cap:48,order:null,hb:'2026-08-02 11:00',site:'广州仓 · 待处置',since:'2025-11-04',temp:0,rate:0}
+  ],
+  moves:[
+    {t:'2026-10-18 14:20',type:'入库',sn:'DM2-2401-0023',order:'DM-20261008-0072',by:'张磊',note:'客户寄回，待检测'},
+    {t:'2026-10-17 09:20',type:'出库',sn:'DM3-2402-0161',order:'DM-20261016-0091',by:'张磊',note:'杭州仓 → 苏州 · 顺丰 SF7788990011'},
+    {t:'2026-10-06 10:15',type:'上架',sn:'DM3-2402-0121',order:'DM-20260921-0058',by:'李倩',note:'检测通过，恢复可用'},
+    {t:'2026-10-06 10:12',type:'上架',sn:'DM3-2402-0123',order:'DM-20260921-0058',by:'李倩',note:'检测通过，调拨上海仓'},
+    {t:'2026-10-04 16:00',type:'入库',sn:'DM3-2402-0121',order:'DM-20260921-0058',by:'张磊',note:'批量归还 3 台'},
+    {t:'2026-09-28 10:02',type:'下架',sn:'DM3-2402-0164',order:'—',by:'李倩',note:'固件低于基线，暂停出租'}
+  ],
+  seq:94
+};
+
+/* ================= 工具 ================= */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const money = n => '¥' + Number(n||0).toLocaleString('zh-CN');
+const pct = (a,b) => b ? Math.min(100, Math.round(a/b*100)) : 0;
+const shortTime = t => t ? t.slice(5) : '—';
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const ICONS = {
+  grid:'<rect x="2.5" y="2.5" width="4.6" height="4.6" rx="1"/><rect x="10.4" y="2.5" width="4.6" height="4.6" rx="1"/><rect x="2.5" y="10.4" width="4.6" height="4.6" rx="1"/><rect x="10.4" y="10.4" width="4.6" height="4.6" rx="1"/>',
+  file:'<path d="M4.2 2.5h5.4L13 5.9v9.1H4.2V2.5Z"/><path d="M9.4 2.5v3.6H13M6.3 9h4.6M6.3 11.6h4.6"/>',
+  cube:'<path d="M2.6 5.6 9 2.2l6.4 3.4v6.8L9 15.8l-6.4-3.4V5.6Z"/><path d="M2.6 5.6 9 9l6.4-3.4M9 9v6.8"/>',
+  box:'<rect x="2" y="5.4" width="14" height="8.2" rx="1"/><path d="M2 8.6h14M5.6 5.4V3.2M12.4 5.4V3.2"/>',
+  clock:'<circle cx="9" cy="9" r="6.8"/><path d="M9 5.2v4.2l2.8 1.6"/>',
+  search:'<circle cx="8" cy="8" r="5.4"/><path d="M12.2 12.2 15 15"/>',
+  plus:'<path d="M9 3.6v10.8M3.6 9h10.8"/>',
+  right:'<path d="M6.5 3.5 12 9l-5.5 5.5"/>',
+  left:'<path d="M11.5 3.5 6 9l5.5 5.5"/>',
+  check:'<path d="M3.5 9.4 7.2 13l7-7.4"/>',
+  alert:'<path d="M9 2.8 16 15H2L9 2.8Z"/><path d="M9 7v3.4M9 12.6v.2"/>',
+  info:'<circle cx="9" cy="9" r="6.8"/><path d="M9 8v4.4M9 5.6v.2"/>',
+  swap:'<path d="M3 6.6h9.2l-2.4-2.4M15 11.4H5.8l2.4 2.4"/>',
+  down:'<path d="M9 3v8.2M5.4 8l3.6 3.6L12.6 8M3.4 14.4h11.2"/>',
+  out:'<path d="M8 3.4H3.8v11.2H8M11.4 6 14.8 9l-3.4 3M7 9h7.4"/>',
+  in:'<path d="M10 3.4h4.2v11.2H10M6.6 6 3.2 9l3.4 3M11 9H3.6"/>',
+  wrench:'<path d="M11.2 2.8a4 4 0 0 0-3.6 5.9L2.8 13.5l1.7 1.7 4.8-4.8a4 4 0 0 0 5.9-3.6l-2.3 2.3-2-2 2.3-2.3Z"/>',
+  close:'<path d="M4 4l10 10M14 4 4 14"/>',
+  user:'<circle cx="9" cy="6.4" r="2.8"/><path d="M3.6 15c.6-2.7 2.8-4.2 5.4-4.2S13.8 12.3 14.4 15"/>',
+  refresh:'<path d="M14.6 8a5.7 5.7 0 1 0-1.2 4.4"/><path d="M14.8 3.6v4.6h-4.6"/>'
+};
+const ic = (n,s=16) => '<svg width="'+s+'" height="'+s+'" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">'+ICONS[n]+'</svg>';
+
+const orderById = id => DB.orders.find(o=>o.id===id);
+const deviceBySn = sn => DB.devices.find(d=>d.sn===sn);
+const pill = (tone,txt) => '<span class="pill pill-'+tone+'"><i></i>'+txt+'</span>';
+const oPill = o => pill(OS[o.status].tone, OS[o.status].lab);
+const dPill = d => pill(DS[d.status].tone, DS[d.status].lab);
+
+/* 订单日志：由时间戳推导，动作发生时再追加 */
+function buildLogs(o){
+  const L=[{t:o.createdAt,who:o.contact||'客户',what:'提交订单',note:MODELS[o.model].name+' × '+o.qty+' 台'}];
+  if(o.shippedAt) L.push({t:o.shippedAt,who:'运维 · 张磊',what:'订单受理，设备出库',note:'杭州仓 → '+o.site});
+  if(o.confirmedAt) L.push({t:o.confirmedAt,who:o.contact||'客户',what:'确认收货',note:'设备上电自检通过，迁移任务排队中'});
+  if(o.status==='using') L.push({t:(o.confirmedAt||o.createdAt).slice(0,10)+' 20:00',who:'系统',what:'迁移任务启动',note:'夜间窗口 · 目标 '+o.region});
+  if(o.returnAt) L.push({t:o.returnAt,who:o.contact||'客户',what:'申请归还设备',note:'顺丰 SF7788990011'});
+  if(o.completedAt) L.push({t:o.completedAt,who:'运维 · 张磊',what:'设备入库检测通过',note:'订单关闭'});
+  if(o.status==='cancelled') L.push({t:o.createdAt.slice(0,10)+' 18:30',who:o.contact||'客户',what:'取消订单',note:'项目排期变更'});
+  return L.reverse();
+}
+DB.orders.forEach(o=>{ o.logs = buildLogs(o); });
+
+const ui = {
+  portal:'client',
+  page:'overview',
+  params:{},
+  tab:'devices',
+  filters:{orders:'all',inv:'all',opsorders:'all'},
+  q:{orders:'',inv:'',opsorders:''},
+  invModel:'', invWh:'',
+  selected:new Set(),
+  wiz:{step:1, agree:false, form:{model:'M3',qty:2,days:30,dataSize:36,source:'车载采集硬盘',region:'华东2（上海）',window:'night',project:'',site:'',contact:'周明',phone:'138 0000 6621',pay:'月结'}},
+  history:[]
+};
+function go(page,params){
+  ui.history.push({page:ui.page,params:ui.params,portal:ui.portal});
+  ui.page=page; ui.params=params||{};
+  ui.tab=(params&&params.tab)||'devices';
+  ui.selected.clear();
+  closeModal();
+  document.querySelector('.app')?.classList.remove('nav-open');
+  render(); window.scrollTo({top:0});
+}
+function back(){
+  const h=ui.history.pop();
+  if(!h){ go('overview'); return; }
+  ui.portal=h.portal; ui.page=h.page; ui.params=h.params||{}; render(); window.scrollTo({top:0});
+}
+function toast(msg){
+  const el=$('#toast');
+  el.innerHTML=ic('check',15)+'<span>'+esc(msg)+'</span>';
+  el.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>el.classList.remove('on'),2600);
+}
+function openModal(html,wide){
+  const m=$('#modal');
+  m.className='modal'+(wide?' wide':'');
+  m.innerHTML=html;
+  $('#mask').classList.add('on');
+}
+function closeModal(){ $('#mask').classList.remove('on'); }
+$('#mask').addEventListener('click',e=>{ if(e.target.id==='mask') closeModal(); });
+/* ================= 导航 / 渲染 ================= */
+const NAV = {
+  client:[
+    {sec:'工作台'},
+    {id:'overview',lab:'概览',icon:'grid'},
+    {sec:'迁移管理'},
+    {id:'orders',lab:'我的订单',icon:'file'},
+    {id:'devices',lab:'设备管理',icon:'cube'}
+  ],
+  ops:[
+    {sec:'设备运营'},
+    {id:'ops',lab:'库存概览',icon:'grid'},
+    {id:'inventory',lab:'设备库存',icon:'box'},
+    {id:'opsorders',lab:'订单受理',icon:'file'},
+    {id:'movements',lab:'出入库记录',icon:'clock'}
+  ]
+};
+const PAGE_OF_PORTAL = {client:'overview', ops:'ops'};
+
+function navBadge(id){
+  if(id==='opsorders'){ const n=DB.orders.filter(o=>o.status==='pending').length; return n||0; }
+  if(id==='inventory'){ const n=DB.devices.filter(d=>['returning','inspecting'].includes(d.status)).length; return n||0; }
+  return 0;
+}
+function sidebarHTML(){
+  const u = ui.portal==='client'?DB.user:DB.opsUser;
+  const items = NAV[ui.portal].map(it=>{
+    if(it.sec) return '<div class="nav-sec">'+it.sec+'</div>';
+    const n = navBadge(it.id);
+    const on = ui.page===it.id || (ui.page==='orderdetail'&&it.id==='orders') || (ui.page==='ordernew'&&it.id==='orders')
+      || (ui.page==='devicedetail'&&it.id==='devices') || (ui.page==='opsdevice'&&it.id==='inventory');
+    return '<div class="nav-item'+(on?' on':'')+'" data-act="nav" data-page="'+it.id+'" role="button" tabindex="0">'
+      + ic(it.icon,16) + '<span>'+it.lab+'</span>' + (n?'<span class="n-badge">'+n+'</span>':'') + '</div>';
+  }).join('');
+  return items
+    + '<div class="side-foot"><div class="side-user"><div class="avatar">'+u.name.slice(0,1)+'</div>'
+    + '<div class="u-t"><b>'+esc(u.org)+'</b><span>'+esc(u.name)+' · '+esc(u.role)+'</span></div></div></div>';
+}
+
+function render(){
+  const ae=document.activeElement, aid=ae&&ae.id, apos=ae&&ae.selectionStart;
+  $$('.portal-switch button').forEach(b=>b.classList.toggle('on', b.dataset.p===ui.portal));
+  $('#sidebar').innerHTML = sidebarHTML();
+  const fn = PAGES[ui.page] || PAGES.overview;
+  $('#view').innerHTML = fn();
+  $('#topAvatar').textContent = ui.portal==='client'?'周':'张';
+  document.title = (ui.portal==='client'?'客户控制台':'运维后台')+' · 数据迁移平台';
+  if(aid){
+    const el=document.getElementById(aid);
+    if(el){ try{ el.focus(); el.setSelectionRange(apos,apos); }catch(e){} }
+  }
+}
+
+function head(title, sub, actions, crumb){
+  return '<div class="page-head"><div>'
+    + (crumb||'')
+    + '<h1 class="page-title">'+title+'</h1>'
+    + (sub?'<div class="page-sub">'+sub+'</div>':'')
+    + '</div><div class="head-actions">'+(actions||'')+'</div></div>';
+}
+function crumbBack(text){
+  return '<div class="crumb"><a data-act="back">‹ 返回</a><span>/</span><span>'+text+'</span></div>';
+}
+function railHTML(o,dense){
+  if(o.status==='cancelled'){
+    return '<div class="notice notice-gray" style="margin:0">'+ic('info')+'<div>该订单已取消，未产生设备租金。</div></div>';
+  }
+  const cur = RAIL_IDX[o.status];
+  const allDone = o.status==='completed';
+  return '<div class="rail'+(dense?' dense':'')+'">'+RAIL.map((s,i)=>{
+    const cls = (allDone||i<cur)?'done':(i===cur?'active':'');
+    return '<div class="rail-step '+cls+'"><div class="rail-dot"></div><div class="rail-lab">'+s.lab+'</div>'
+      + '<div class="rail-time">'+(o[s.key]?shortTime(o[s.key]):'—')+'</div></div>';
+  }).join('')+'</div>';
+}
+function spark(vals,color){
+  const w=112,h=26,max=Math.max.apply(null,vals),min=Math.min.apply(null,vals);
+  const pts=vals.map((v,i)=>{
+    const x=(i/(vals.length-1)*w).toFixed(1);
+    const y=(h-3-((v-min)/((max-min)||1))*(h-8)).toFixed(1);
+    return x+','+y;
+  }).join(' ');
+  return '<svg class="spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true">'
+    + '<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+}
+function pager(total,shown){
+  return '<div class="tbl-foot"><span>共 '+total+' 条'+(shown!==total?' · 当前筛选 '+shown+' 条':'')+'</span>'
+    + '<div class="pager"><button disabled aria-label="上一页">‹</button><button class="on">1</button><button disabled aria-label="下一页">›</button></div></div>';
+}
+function emptyBox(title,desc,btn){
+  return '<div class="empty"><b>'+title+'</b>'+desc+(btn||'')+'</div>';
+}
+function sumLine(k,v){ return '<div class="sum-line"><span>'+k+'</span><b>'+v+'</b></div>'; }
+
+/* ================= 客户端 · 概览 ================= */
+function clientOverview(){
+  const active = DB.orders.filter(o=>['pending','shipping','using'].includes(o.status));
+  const using = DB.devices.filter(d=>d.status==='in_use');
+  const returning = DB.devices.filter(d=>d.status==='returning');
+  const migrated = DB.devices.reduce((s,d)=>s+d.used,0);
+  const cur = orderById('DM-20261012-0086');
+
+  const kpis = '<div class="kpi-row">'
+    + '<div class="kpi"><div class="kpi-k"><span>进行中订单</span>'+ic('file',15)+'</div>'
+      + '<div class="kpi-v">'+active.length+'<small>单</small></div>'
+      + '<div class="kpi-f">待确认 '+DB.orders.filter(o=>o.status==='pending').length+' · 运输中 '+DB.orders.filter(o=>o.status==='shipping').length+' · 使用中 '+DB.orders.filter(o=>o.status==='using').length+'</div></div>'
+    + '<div class="kpi"><div class="kpi-k"><span>在线设备</span>'+ic('cube',15)+'</div>'
+      + '<div class="kpi-v">'+using.length+'<small>台</small></div>'
+      + '<div class="kpi-f">数据迁移中 '+using.length+' 台 · 待归还 '+returning.length+' 台</div></div>'
+    + '<div class="kpi"><div class="kpi-k"><span>本月已迁移</span>'+ic('down',15)+'</div>'
+      + '<div class="kpi-v">'+migrated.toFixed(1)+'<small>TB</small></div>'
+      + '<div class="kpi-f">较上月 +21.4%</div>'
+      + spark([12,18,15,26,31,28,42],'#1677FF')+'</div>'
+    + '</div>';
+
+  const orderCard = '<div class="panel"><div class="panel-head"><div class="panel-title">进行中的订单 <span class="cnt">'+active.length+' 单</span></div>'
+    + '<span class="link" data-act="nav" data-page="orders">全部订单 ›</span></div><div class="panel-body">'
+    + (cur?orderCardHTML(cur):emptyBox('暂无进行中订单','创建订单后，设备运输与迁移进度会显示在这里'))
+    + '</div></div>';
+
+  const recent = DB.orders.slice(0,4);
+  const recentTbl = '<div class="panel"><div class="panel-head"><div class="panel-title">最近订单</div>'
+    + '<span class="link" data-act="nav" data-page="orders">查看全部 ›</span></div>'
+    + '<div class="tbl-scroll"><table class="tbl"><thead><tr><th>订单号</th><th>设备数量</th><th>订单状态</th><th>创建时间</th><th>确认时间</th><th style="text-align:right">操作</th></tr></thead><tbody>'
+    + recent.map(o=>'<tr>'
+        + '<td data-l="订单号"><span class="mono">'+o.id+'</span></td>'
+        + '<td data-l="设备数量">'+o.qty+' 台</td>'
+        + '<td data-l="状态">'+oPill(o)+'</td>'
+        + '<td data-l="创建时间" class="mono muted">'+o.createdAt+'</td>'
+        + '<td data-l="确认时间" class="mono muted">'+(o.confirmedAt||'—')+'</td>'
+        + '<td data-l="操作" style="text-align:right"><a class="link" data-act="open-order" data-id="'+o.id+'">详情</a></td>'
+      + '</tr>').join('')
+    + '</tbody></table></div></div>';
+
+  const todoN = DB.orders.filter(o=>o.status==='shipping').length + DB.orders.filter(o=>o.status==='using').length + 1;
+  const todo = '<div class="panel"><div class="panel-head"><div class="panel-title">待办</div><span class="cnt">'+todoN+' 项</span></div>'
+    + '<div class="panel-body tight">'
+    + (DB.orders.filter(o=>o.status==='shipping').map(o=>todoRow('in','待确认收货',o.id+' · '+o.qty+' 台到货','shipping',o.id)).join('')||'')
+    + (DB.orders.filter(o=>o.status==='using').map(o=>todoRow('clock','归还提醒','租期至 '+o.dueAt+' · 剩余 23 天','using',o.id)).join('')||'')
+    + todoRow('alert','资料待完善','补全发票抬头，便于月结开票','info',null)
+    + '</div></div>';
+
+  const quick = '<div class="panel"><div class="panel-head"><div class="panel-title">快捷入口</div></div><div class="panel-body" style="display:flex;flex-direction:column;gap:10px">'
+    + '<button class="btn" data-act="new-order">'+ic('plus',14)+' 创建迁移订单</button>'
+    + '<button class="btn" data-act="nav" data-page="devices">'+ic('cube',14)+' 查看设备状态</button>'
+    + '<button class="btn" data-act="demo-tip">'+ic('info',14)+' 原型演示路径</button>'
+    + '</div></div>';
+
+  return head('数据迁移控制台','示例科技有限公司 · 企业账户 · 华东区',
+      '<button class="btn" data-act="help">使用指引</button><button class="btn btn-primary" data-act="new-order">'+ic('plus',14)+'创建订单</button>')
+    + kpis
+    + '<div class="detail-grid"><div>'+orderCard+recentTbl+'</div><div>'+todo+quick+'</div></div>';
+}
+function todoRow(icon,t,s,type,id){
+  const colors={in:'#E6F4FF|#1677FF',clock:'#FFF7E6|#FA8C16',alert:'#FFF1F0|#FF4D4F',info:'#F6FFED|#52C41A'};
+  const c=colors[icon]||colors.info; const bg=c.split('|')[0], fg=c.split('|')[1];
+  return '<div class="todo" '+(id?'data-act="open-order" data-id="'+id+'"':'data-act="demo-tip"')+'>'
+    + '<div class="todo-ic" style="background:'+bg+';color:'+fg+'">'+ic(icon==='in'?'in':icon==='clock'?'clock':'alert',15)+'</div>'
+    + '<div class="todo-b"><div class="todo-t">'+t+'</div><div class="todo-s">'+s+'</div></div>'
+    + '<span class="todo-go">'+ic('right',14)+'</span></div>';
+}
+function orderCardHTML(o){
+  return '<div class="oc"><div class="oc-head"><div>'
+    + '<div class="mono oc-id" data-act="open-order" data-id="'+o.id+'">'+o.id+'</div>'
+    + '<div class="oc-meta"><span>'+MODELS[o.model].name+' × '+o.qty+' 台</span><span>'+esc(o.site)+'</span><span>租期至 '+o.dueAt+'</span></div>'
+    + '</div>'+oPill(o)+'</div>'
+    + '<div class="oc-rail">'+railHTML(o,true)+'</div>'
+    + '<div class="oc-foot"><span>'+OS[o.status].hint+'</span>'
+    + '<span style="display:flex;gap:12px"><a class="link" data-act="open-order" data-id="'+o.id+'">订单详情</a>'
+    + '<a class="link" data-act="nav" data-page="devices">设备状态 ›</a></span></div></div>';
+}
+
+/* ================= 客户端 · 订单列表 ================= */
+const ORDER_TABS = [
+  {k:'all',lab:'全部'},{k:'pending',lab:'待确认'},{k:'shipping',lab:'运输中'},
+  {k:'using',lab:'使用中'},{k:'returning',lab:'归还中'},{k:'completed',lab:'已完成'}
+];
+function filterOrders(){
+  let list = DB.orders.slice();
+  if(ui.filters.orders!=='all') list=list.filter(o=>o.status===ui.filters.orders);
+  const q=ui.q.orders.trim().toLowerCase();
+  if(q) list=list.filter(o=>(o.id+o.project+o.site+MODELS[o.model].name).toLowerCase().includes(q));
+  return list;
+}
+function clientOrders(){
+  const list=filterOrders();
+  const tabs = ORDER_TABS.map(t=>{
+    const n = t.k==='all'?DB.orders.length:DB.orders.filter(o=>o.status===t.k).length;
+    return '<button class="chip'+(ui.filters.orders===t.k?' on':'')+'" data-act="filter-orders" data-k="'+t.k+'">'+t.lab+'<b>'+n+'</b></button>';
+  }).join('');
+
+  const rows = list.map(o=>{
+    const acts = ['<a class="link" data-act="open-order" data-id="'+o.id+'">详情</a>'];
+    if(o.status==='shipping') acts.push('<a class="link" data-act="confirm-receipt" data-id="'+o.id+'">确认收货</a>');
+    if(o.status==='using') acts.push('<a class="link" data-act="return-device" data-id="'+o.id+'">申请归还</a>');
+    if(o.status==='pending') acts.push('<a class="link" data-act="cancel-order" data-id="'+o.id+'">取消</a>');
+    if(o.status==='completed') acts.push('<a class="link" data-act="rebuy" data-id="'+o.id+'">再次购买</a>');
+    return '<tr>'
+      + '<td data-l="订单号"><div class="mono">'+o.id+'</div><div class="cell-sub">'+esc(o.project)+'</div></td>'
+      + '<td data-l="设备数量"><div>'+o.qty+' 台</div><div class="cell-sub">'+MODELS[o.model].name+'</div></td>'
+      + '<td data-l="订单状态">'+oPill(o)+'</td>'
+      + '<td data-l="创建时间" class="mono sec">'+o.createdAt+'</td>'
+      + '<td data-l="确认时间" class="mono '+(o.confirmedAt?'sec':'muted')+'">'+(o.confirmedAt||'—')+'</td>'
+      + '<td data-l="操作" class="no-l"><div class="ops">'+acts.join('')+'</div></td></tr>';
+  }).join('');
+
+  const body = list.length ? rows
+    : '<tr><td colspan="6">'+emptyBox('没有匹配的订单','换个筛选条件，或清空搜索关键词试试。','<button class="btn btn-sm" data-act="reset-orders">清空筛选</button>')+'</td></tr>';
+
+  return head('我的订单','共 '+DB.orders.length+' 个订单 · 支持批量迁移与按期归还',
+      '<button class="btn" data-act="export">'+ic('down',14)+'导出</button><button class="btn btn-primary" data-act="new-order">'+ic('plus',14)+'创建订单</button>')
+    + '<div class="panel"><div class="filterbar">'
+      + '<div class="chips">'+tabs+'</div><span class="grow"></span>'
+      + '<label class="search">'+ic('search',14)+'<input class="input" id="qOrders" data-q="orders" placeholder="搜索订单号 / 项目 / 站点" value="'+esc(ui.q.orders)+'"></label>'
+    + '</div><div class="tbl-scroll"><table class="tbl"><thead><tr>'
+      + '<th>订单号</th><th>设备数量</th><th>订单状态</th><th>创建时间</th><th>确认时间</th><th style="text-align:right">操作</th>'
+      + '</tr></thead><tbody>'+body+'</tbody></table></div>'+pager(DB.orders.length,list.length)+'</div>';
+}
+
+/* ================= 客户端 · 创建订单 ================= */
+function wizCost(){
+  const f=ui.wiz.form, m=MODELS[f.model];
+  const rent=m.rent*f.qty*f.days;
+  const data=Math.round(f.dataSize*1024*0.02);
+  return {rent:rent, data:data, total:rent+data};
+}
+function wizSumHTML(){
+  const f=ui.wiz.form, c=wizCost();
+  return '<div class="panel-head"><div class="panel-title">订单摘要</div></div><div class="panel-body">'
+    + sumLine('设备型号',MODELS[f.model].name)
+    + sumLine('设备数量',f.qty+' 台')
+    + sumLine('租期',f.days+' 天')
+    + sumLine('预估数据量',f.dataSize+' TB')
+    + sumLine('设备租金',money(c.rent))
+    + sumLine('数据服务费',money(c.data))
+    + '<div class="sum-total"><span>预估合计</span><b>'+money(c.total)+'</b></div>'
+    + '<div style="font-size:12px;color:var(--text-3);margin-top:8px;line-height:18px">含 3 台备机保障服务。最终以运维受理后账单为准，月结客户按实际用量结算。</div>'
+    + '</div>';
+}
+function updateWizSum(){ const el=$('#wizSum'); if(el) el.innerHTML=wizSumHTML(); }
+
+function stepOne(){
+  const f=ui.wiz.form;
+  const opts=Object.keys(MODELS).map(k=>{
+    const m=MODELS[k];
+    return '<div class="opt'+(f.model===k?' on':'')+'" data-act="wiz-model" data-m="'+k+'" role="radio" tabindex="0" aria-checked="'+(f.model===k)+'">'
+      + '<div class="opt-n">'+m.name+'</div><div class="opt-c">'+m.desc+'</div>'
+      + '<div class="opt-p">'+money(m.rent)+'<span style="font-size:11px;color:var(--text-3);font-weight:400"> /台/天</span></div>'
+      + '<span class="opt-check"></span></div>';
+  }).join('');
+  return '<div class="form-sec"><div class="form-sec-t">设备型号 <span>按单站点数据量选择，可混合下单</span></div>'
+    + '<div class="opt-grid">'+opts+'</div></div>'
+    + '<div class="form-sec"><div class="form-sec-t">数量与租期</div><div class="field-row">'
+      + '<div class="field"><label>设备数量</label><div class="stepper">'
+        + '<button data-act="wiz-qty" data-d="-1" aria-label="减少">−</button>'
+        + '<input id="wzQty" value="'+f.qty+'" readonly aria-label="设备数量">'
+        + '<button data-act="wiz-qty" data-d="1" aria-label="增加">+</button></div>'
+        + '<div class="hint">当前 '+MODELS[f.model].name+' 可租 5 台，超出可登记排队</div></div>'
+      + '<div class="field"><label>租期</label><div class="radio-line" style="height:34px;align-items:center">'
+        + [30,60,90].map(d=>'<span class="radio'+(f.days===d?' on':'')+'" data-act="wiz-days" data-d="'+d+'"><i></i>'+d+' 天</span>').join('')
+        + '</div><div class="hint">到期前 3 天可申请续租或归还</div></div>'
+    + '</div></div>'
+    + '<div class="form-sec"><div class="form-sec-t">交付信息</div>'
+      + '<div class="field"><label>交付站点</label><input class="input" id="wzSite" data-bind="site" value="'+esc(f.site)+'" placeholder="例如：杭州 · 滨江数据中心 A1"></div>'
+      + '<div class="field"><label>期望到货日期</label><select class="select" data-bind="arrive" id="wzArrive"><option>2026-10-21（最快）</option><option>2026-10-23</option><option>2026-10-26</option></select>'
+      + '<div class="hint">华东区顺丰陆运，通常在受理后 24–48 小时送达</div></div>'
+    + '</div>';
+}
+function stepTwo(){
+  const f=ui.wiz.form;
+  return '<div class="form-sec"><div class="form-sec-t">数据源 <span>决定采集盘类型与线缆配置</span></div>'
+    + '<div class="field"><label>数据源类型</label><select class="select" data-bind="source" id="wzSource">'
+      + ['车载采集硬盘','NAS 存储','SAN 存储','本地磁盘 / 移动硬盘'].map(s=>'<option'+(f.source===s?' selected':'')+'>'+s+'</option>').join('')
+      + '</select></div>'
+    + '<div class="field-row"><div class="field"><label>预估数据量（TB）</label><input class="input" type="number" min="1" max="200" id="wzData" data-bind="dataSize" value="'+f.dataSize+'">'
+      + '<div class="hint">用于预分配设备容量与迁移窗口</div></div>'
+      + '<div class="field"><label>目标云区域</label><select class="select" id="wzRegion" data-bind="region">'
+      + ['华东2（上海）','华东1（杭州）','华北2（北京）','华南1（深圳）'].map(s=>'<option'+(f.region===s?' selected':'')+'>'+s+'</option>').join('')
+      + '</select></div></div></div>'
+    + '<div class="form-sec"><div class="form-sec-t">迁移策略</div>'
+    + '<div class="field"><label>迁移窗口</label><div class="radio-line">'
+      + [['night','夜间（推荐）'],['now','立即'],['custom','自定义']].map(r=>
+          '<span class="radio'+(f.window===r[0]?' on':'')+'" data-act="wiz-window" data-w="'+r[0]+'"><i></i>'+r[1]+'</span>').join('')
+    + '</div><div class="hint">夜间窗口可避开产线带宽高峰，平均耗时缩短 18%</div></div>'
+    + '<div class="field"><label>加密方式</label><select class="select" id="wzEnc"><option>KMS 托管密钥（默认）</option><option>客户自持密钥 BYOK</option><option>不加密（仅内网可信环境）</option></select></div>'
+    + '</div>'
+    + '<div class="notice notice-info">'+ic('info',15)+'<div>设备到达后需完成上电自检并确认收货，迁移任务才会启动。上传过程只走专线，不经过公网。</div></div>';
+}
+function stepThree(){
+  const f=ui.wiz.form, c=wizCost();
+  return '<div class="form-sec"><div class="form-sec-t">项目与联系人</div>'
+    + '<div class="field"><label>项目名称</label><input class="input" id="wzProject" data-bind="project" value="'+esc(f.project)+'" placeholder="例如：智驾路测数据回传"></div>'
+    + '<div class="field-row"><div class="field"><label>联系人</label><input class="input" id="wzContact" data-bind="contact" value="'+esc(f.contact)+'"></div>'
+    + '<div class="field"><label>联系电话</label><input class="input" id="wzPhone" data-bind="phone" value="'+esc(f.phone)+'"></div></div>'
+    + '<div class="field"><label>结算方式</label><select class="select" id="wzPay" data-bind="pay"><option>月结（企业账户）</option><option>预付款</option><option>按量后付</option></select></div>'
+    + '</div>'
+    + '<div class="form-sec"><div class="form-sec-t">确认订单</div>'
+    + '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px">'
+      + '<div style="padding:12px 14px;border-bottom:1px solid var(--border-2);display:flex;justify-content:space-between;font-size:13px"><span class="muted">设备</span><b style="font-weight:500">'+MODELS[f.model].name+' × '+f.qty+' 台</b></div>'
+      + '<div style="padding:12px 14px;border-bottom:1px solid var(--border-2);display:flex;justify-content:space-between;font-size:13px"><span class="muted">租期 / 数据量</span><b style="font-weight:500">'+f.days+' 天 · '+f.dataSize+' TB</b></div>'
+      + '<div style="padding:12px 14px;border-bottom:1px solid var(--border-2);display:flex;justify-content:space-between;font-size:13px"><span class="muted">交付站点</span><b style="font-weight:500">'+(esc(f.site)||'待填写')+'</b></div>'
+      + '<div style="padding:12px 14px;display:flex;justify-content:space-between;font-size:13px"><span class="muted">预估费用</span><b style="font-weight:600;color:var(--amber)">'+money(c.total)+'</b></div>'
+    + '</div>'
+    + '<label class="check'+(ui.wiz.agree?' on':'')+'" data-act="wiz-agree"><i></i><span>我已阅读并同意《设备租用与数据安全条款》，承诺迁移完成后按期归还全部设备。</span></label>'
+    + '</div>';
+}
+
+function orderNew(){
+  const f=ui.wiz.form;
+  const step=ui.wiz.step;
+  const steps=[1,2,3].map((n,i)=>{
+    const lab=['设备与租期','迁移配置','确认提交'][i];
+    const cls = step===n?'on':(step>n?'done':'');
+    return '<div class="step '+cls+'"><span class="step-n">'+(step>n?'✓':n)+'</span><span>'+lab+'</span></div>'+(n<3?'<div class="step-line"></div>':'');
+  }).join('');
+  const body = step===1?stepOne():step===2?stepTwo():stepThree();
+  const backBtn = step>1?'<button class="btn" data-act="wiz-prev">上一步</button>':'<button class="btn" data-act="nav" data-page="orders">取消</button>';
+  const nextBtn = step<3
+    ? '<button class="btn btn-primary" data-act="wiz-next">下一步</button>'
+    : '<button class="btn btn-primary" data-act="wiz-submit">提交订单</button>';
+
+  return head('创建迁移订单','选择设备与租期，提交后由运维受理并发货',
+      '<button class="btn" data-act="nav" data-page="orders">我的订单</button>', crumbBack('我的订单'))
+    + '<div class="wizard"><div><div class="panel"><div class="panel-body">'
+      + '<div class="steps">'+steps+'</div>'+body
+      + '<div class="wiz-foot"><div>'+backBtn+'</div><div style="display:flex;gap:8px">'
+      + (step===3?'<button class="btn" data-act="wiz-prev">上一步</button>':'')
+      + nextBtn+'</div></div>'
+    + '</div></div></div>'
+    + '<div class="summary"><div class="panel" id="wizSum">'+wizSumHTML()+'</div>'
+      + '<div class="panel"><div class="panel-body" style="font-size:12.5px;color:var(--text-2);line-height:20px">'
+      + '<div style="font-weight:600;color:var(--text);margin-bottom:8px">交付说明</div>'
+      + '· 设备含防震箱、线缆与上电套件<br>· 受理后 24–48 小时送达<br>· 归还时使用同箱寄回，运费由平台承担</div></div>'
+    + '</div></div>';
+}
+
+/* ================= 客户端 · 订单详情 ================= */
+function orderActions(o){
+  if(o.status==='pending') return '<button class="btn btn-danger" data-act="cancel-order" data-id="'+o.id+'">取消订单</button>';
+  if(o.status==='shipping') return '<button class="btn" data-act="logistics" data-id="'+o.id+'">查看物流</button><button class="btn btn-primary" data-act="confirm-receipt" data-id="'+o.id+'">确认收货</button>';
+  if(o.status==='using') return '<button class="btn" data-act="swap-device" data-id="'+o.id+'">申请更换设备</button><button class="btn btn-primary" data-act="return-device" data-id="'+o.id+'">申请归还</button>';
+  if(o.status==='returning') return '<button class="btn" data-act="logistics" data-id="'+o.id+'">查看入库进度</button>';
+  if(o.status==='completed') return '<button class="btn" data-act="receipt" data-id="'+o.id+'">'+ic('down',14)+'下载回单</button><button class="btn btn-primary" data-act="rebuy" data-id="'+o.id+'">再次购买</button>';
+  return '<button class="btn btn-primary" data-act="rebuy" data-id="'+o.id+'">再次购买</button>';
+}
+function orderDetail(){
+  const o=orderById(ui.params.id)||DB.orders[0];
+  const devices = o.devices.map(deviceBySn).filter(Boolean);
+  const custDev = devices.length;
+  const migrated = devices.reduce((s,d)=>s+d.used,0);
+  const capSum = devices.reduce((s,d)=>s+d.cap,0);
+
+  const summary='<div class="metrics five">'
+    + '<div class="metric"><div class="metric-k">订单号</div><div class="metric-v" style="font-size:13px;font-family:var(--mono);font-weight:500;letter-spacing:-.2px">'+o.id+'</div></div>'
+    + '<div class="metric"><div class="metric-k">设备数量</div><div class="metric-v">'+o.qty+'<small>台</small></div></div>'
+    + '<div class="metric"><div class="metric-k">订单状态</div><div class="metric-v" style="font-size:14px;font-weight:500;margin-top:8px">'+oPill(o)+'</div></div>'
+    + '<div class="metric"><div class="metric-k">创建时间</div><div class="metric-v" style="font-size:13px;font-family:var(--mono);font-weight:500">'+o.createdAt+'</div></div>'
+    + '<div class="metric"><div class="metric-k">确认时间</div><div class="metric-v" style="font-size:13px;font-family:var(--mono);font-weight:500;color:'+(o.confirmedAt?'var(--text)':'var(--text-3)')+'">'+(o.confirmedAt||'待确认')+'</div></div>'
+    + '</div>';
+
+  const devRows = devices.length ? devices.map(d=>'<tr>'
+      + '<td data-l="设备 SN"><span class="mono">'+d.sn+'</span></td>'
+      + '<td data-l="型号">'+MODELS[d.model].name+'</td>'
+      + '<td data-l="状态">'+dPill(d)+'</td>'
+      + '<td data-l="容量使用"><div class="bar-row"><div class="bar'+(d.status==='in_use'?' amber':'')+'" style="width:88px"><i style="width:'+pct(d.used,d.cap)+'%"></i></div><span class="pc">'+pct(d.used,d.cap)+'%</span></div></td>'
+      + '<td data-l="最后心跳" class="mono muted">'+d.hb+'</td>'
+      + '<td data-l="操作" class="no-l"><div class="ops"><a class="link" data-act="open-device" data-sn="'+d.sn+'">设备详情</a>'
+      + (o.status==='using'?'<a class="link" data-act="swap-one" data-id="'+o.id+'" data-sn="'+d.sn+'">更换</a>':'')+'</div></td>'
+    + '</tr>').join('')
+    : '<tr><td colspan="6">'+emptyBox('暂未分配设备','运维受理后，设备 SN 会显示在这里')+'</td></tr>';
+
+  const info = '<div class="panel-body"><div class="dl">'
+    + '<dt>项目名称</dt><dd>'+esc(o.project)+'</dd>'
+    + '<dt>交付站点</dt><dd>'+esc(o.site)+'</dd>'
+    + '<dt>数据源</dt><dd>'+esc(o.source)+'</dd>'
+    + '<dt>数据量</dt><dd>'+o.dataSize+' TB</dd>'
+    + '<dt>目标区域</dt><dd>'+esc(o.region)+'</dd>'
+    + '<dt>联系人</dt><dd>'+esc(o.contact)+' · '+esc(o.phone)+'</dd>'
+    + '<dt>租期到期</dt><dd>'+o.dueAt+'</dd>'
+    + '<dt>结算方式</dt><dd>月结（企业账户）</dd>'
+    + '</div></div>';
+
+  const logs='<div class="panel-body"><div class="tl">'
+    + o.logs.map((l,i)=>'<div class="tl-item'+(i===0?' hl':'')+'"><div class="tl-t"><b style="font-weight:500">'+esc(l.what)+'</b> · '+esc(l.who)+'</div><div class="tl-m">'+l.t+'</div>'
+      + (l.note?'<div style="font-size:12.5px;color:var(--text-2);margin-top:2px">'+esc(l.note)+'</div>':'')+'</div>').join('')
+    + '</div></div>';
+
+  const tab=ui.tab;
+  const tabBody = tab==='devices'
+    ? '<div class="tbl-scroll"><table class="tbl"><thead><tr><th>设备 SN</th><th>型号</th><th>设备状态</th><th>容量使用</th><th>最后心跳</th><th style="text-align:right">操作</th></tr></thead><tbody>'+devRows+'</tbody></table></div>'
+    : tab==='info'?info:logs;
+
+  const main='<div class="panel" style="margin-top:16px"><div class="panel-body" style="padding:18px 18px 6px">'
+    + '<div style="font-size:12px;color:var(--text-3);margin-bottom:14px">订单进度</div>'+railHTML(o)+'</div>'
+    + '<div style="padding:16px 18px 0"><div class="notice notice-'+(o.status==='using'?'amber':o.status==='completed'?'gray':'info')+'">'
+      + ic('info',15)+'<div>'+OS[o.status].hint+'</div></div></div>'
+    + '<div class="tabs" style="margin-top:16px">'
+      + '<div class="tab'+(tab==='devices'?' on':'')+'" data-act="tab" data-t="devices">设备清单<b>'+devices.length+'</b></div>'
+      + '<div class="tab'+(tab==='info'?' on':'')+'" data-act="tab" data-t="info">订单信息</div>'
+      + '<div class="tab'+(tab==='logs'?' on':'')+'" data-act="tab" data-t="logs">操作日志<b>'+o.logs.length+'</b></div>'
+    + '</div>'+tabBody+'</div>';
+
+  const side='<div class="panel side-card"><div class="panel-head"><div class="panel-title" style="font-size:13px">迁移任务</div></div><div class="panel-body">'
+      + '<div class="sum-line"><span>已迁移</span><b>'+(migrated?migrated.toFixed(1):'0')+' / '+capSum+' TB</b></div>'
+      + '<div class="bar amber" style="margin:2px 0 10px"><i style="width:'+pct(migrated,capSum)+'%"></i></div>'
+      + '<div class="sum-line"><span>目标区域</span><b style="font-size:12px">'+esc(o.region)+'</b></div>'
+      + '<div class="sum-line"><span>数据源</span><b style="font-size:12px">'+esc(o.source)+'</b></div>'
+      + '<div class="sum-line"><span>结算</span><b>'+money(o.amount)+'</b></div>'
+      + '<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-sm" style="flex:1" data-act="nav" data-page="devices">设备</button>'
+      + '<button class="btn btn-sm" style="flex:1" data-act="contact">联系运维</button></div>'
+    + '</div></div>'
+    + '<div class="panel side-card"><div class="panel-head"><div class="panel-title" style="font-size:13px">归还信息</div></div><div class="panel-body" style="font-size:12.5px;line-height:20px;color:var(--text-2)">'
+      + '归还地址：杭州市滨江区江陵路 88 号 3 号仓<br>收货人：张磊 · 0571-8888 6621<br>'
+      + (o.status==='using'?'<span style="color:var(--amber)">租期至 '+o.dueAt+'，逾期按日计费</span>':'使用同箱寄回，运费平台承担')
+    + '</div></div>';
+
+  return head(o.id,
+      MODELS[o.model].name+' × '+o.qty+' 台 · 创建于 '+o.createdAt,
+      orderActions(o),
+      crumbBack('我的订单'))
+    + summary
+    + '<div style="margin-top:16px" class="detail-grid"><div>'+main+'</div><div>'+side+'</div></div>';
+}
+
+/* ================= 客户端 · 设备 ================= */
+function clientDevices(){
+  const sns=new Set();
+  DB.orders.forEach(o=>o.devices.forEach(s=>sns.add(s)));
+  const all=DB.devices.filter(d=>sns.has(d.sn));
+  const counts={
+    all:all.length,
+    in_use:all.filter(d=>d.status==='in_use').length,
+    move:all.filter(d=>['shipping','locked'].includes(d.status)).length,
+    back:all.filter(d=>['returning','inspecting'].includes(d.status)).length,
+    done:all.filter(d=>d.status==='stock').length
+  };
+  let list=all;
+  if(ui.filters.dev!=='all'){
+    if(ui.filters.dev==='in_use') list=all.filter(d=>d.status==='in_use');
+    if(ui.filters.dev==='move') list=all.filter(d=>['shipping','locked'].includes(d.status));
+    if(ui.filters.dev==='back') list=all.filter(d=>['returning','inspecting'].includes(d.status));
+    if(ui.filters.dev==='done') list=all.filter(d=>d.status==='stock');
+  }
+  const q=(ui.q.dev||'').trim().toLowerCase();
+  if(q) list=list.filter(d=>(d.sn+d.order+'').toLowerCase().includes(q));
+
+  const chips=[['all','全部',counts.all],['in_use','使用中',counts.in_use],['move','在途',counts.move],['back','待归还',counts.back],['done','已回库',counts.done]]
+    .map(c=>'<button class="chip'+(ui.filters.dev===c[0]?' on':'')+'" data-act="filter-dev" data-k="'+c[0]+'">'+c[1]+'<b>'+c[2]+'</b></button>').join('');
+
+  const rows=list.map(d=>{
+    const o=d.order?orderById(d.order):null;
+    return '<tr>'
+      + '<td data-l="设备 SN"><span class="mono">'+d.sn+'</span><div class="cell-sub">'+MODELS[d.model].name+'</div></td>'
+      + '<td data-l="设备状态">'+dPill(d)+'</td>'
+      + '<td data-l="容量使用"><div class="bar-row"><div class="bar'+(d.used?' amber':'')+'" style="width:96px"><i style="width:'+pct(d.used,d.cap)+'%"></i></div><span class="pc">'+pct(d.used,d.cap)+'%</span></div></td>'
+      + '<td data-l="所属订单"><span class="mono">'+(d.order||'—')+'</span></td>'
+      + '<td data-l="最后心跳" class="mono muted">'+d.hb+'</td>'
+      + '<td data-l="操作" class="no-l"><div class="ops"><a class="link" data-act="open-device" data-sn="'+d.sn+'">详情</a>'
+      + (o&&o.status==='using'?'<a class="link" data-act="swap-one" data-id="'+o.id+'" data-sn="'+d.sn+'">更换</a>':'')+'</div></td></tr>';
+  }).join('');
+
+  return head('设备管理','共 '+all.length+' 台设备 · 数据迁移中 '+counts.in_use+' 台',
+      '<button class="btn" data-act="export">'+ic('down',14)+'导出清单</button>')
+    + '<div class="panel"><div class="filterbar"><div class="chips">'+chips+'</div><span class="grow"></span>'
+      + '<label class="search">'+ic('search',14)+'<input class="input" id="qDev" data-q="dev" placeholder="搜索设备 SN / 订单号" value="'+esc(ui.q.dev||'')+'"></label>'
+    + '</div><div class="tbl-scroll"><table class="tbl"><thead><tr>'
+      + '<th>设备 SN</th><th>设备状态</th><th>容量使用</th><th>所属订单</th><th>最后心跳</th><th style="text-align:right">操作</th>'
+      + '</tr></thead><tbody>'+(list.length?rows:'<tr><td colspan="6">'+emptyBox('没有匹配的设备','清空筛选后再试','<button class="btn btn-sm" data-act="reset-dev">清空筛选</button>')+'</td></tr>')+'</tbody></table></div>'
+    + pager(all.length,list.length)+'</div>';
+}
+
+/* ================= 设备详情（客户 / 运维共用） ================= */
+function devicePage(mode){
+  const d=deviceBySn(ui.params.sn)||DB.devices[0];
+  const o=d.order?orderById(d.order):null;
+  const p=pct(d.used,d.cap);
+  const isOps=mode==='ops';
+
+  const actions = isOps
+    ? (d.status==='stock'?'<button class="btn btn-primary" data-act="unshelve" data-sn="'+d.sn+'">下架</button>'
+      : d.status==='offshelf'||d.status==='inspecting'?'<button class="btn btn-primary" data-act="shelve" data-sn="'+d.sn+'">上架</button>'
+      : d.status==='repair'?'<button class="btn btn-primary" data-act="shelve" data-sn="'+d.sn+'">修复上架</button>'
+      : '<button class="btn" data-act="unshelve" data-sn="'+d.sn+'" disabled>当前状态不可操作</button>')
+      + '<button class="btn" data-act="repair" data-sn="'+d.sn+'">报修</button>'
+    : (o&&o.status==='using'?'<button class="btn" data-act="report" data-sn="'+d.sn+'">报障</button><button class="btn btn-primary" data-act="swap-one" data-id="'+o.id+'" data-sn="'+d.sn+'">申请更换</button>'
+      : '<button class="btn" data-act="report" data-sn="'+d.sn+'">报障</button>');
+
+  const kpis='<div class="metrics">'
+    + '<div class="metric"><div class="metric-k">已迁移数据</div><div class="metric-v">'+d.used.toFixed(1)+'<small>TB</small></div></div>'
+    + '<div class="metric"><div class="metric-k">实时速率</div><div class="metric-v">'+(d.rate?d.rate.toFixed(2):'0.00')+'<small>Gbps</small></div></div>'
+    + '<div class="metric"><div class="metric-k">设备温度</div><div class="metric-v">'+(d.temp||'—')+'<small>'+(d.temp?'°C':'')+'</small></div></div>'
+    + '<div class="metric"><div class="metric-k">固件版本</div><div class="metric-v" style="font-family:var(--mono);font-size:15px">'+d.fw+'</div></div>'
+    + '</div>';
+
+  const trend = (function(){
+    const vals=[]; const n=7;
+    for(let i=0;i<n;i++){ vals.push(Math.round(d.used*(i/(n-1))*10)/10); }
+    return vals;
+  })();
+  const chartW=560,chartH=150,pad=26;
+  const maxV=Math.max(d.cap*0.5,Math.max.apply(null,trend),1);
+  const pts=trend.map((v,i)=>{
+    const x=pad+i*(chartW-2*pad)/(trend.length-1);
+    const y=chartH-pad-(v/maxV)*(chartH-2*pad);
+    return [x,y];
+  });
+  const poly=pts.map(p2=>p2[0].toFixed(1)+','+p2[1].toFixed(1)).join(' ');
+  const area='M'+pts[0][0].toFixed(1)+','+(chartH-pad)+' L'+poly.replace(/ /g,' L')+' L'+pts[pts.length-1][0].toFixed(1)+','+(chartH-pad)+' Z';
+  const chart='<svg viewBox="0 0 '+chartW+' '+chartH+'" style="width:100%;height:auto;display:block" role="img" aria-label="容量增长趋势">'
+    + [0,1,2,3].map(i=>'<line x1="'+pad+'" x2="'+(chartW-pad)+'" y1="'+(pad+i*(chartH-2*pad)/3).toFixed(1)+'" y2="'+(pad+i*(chartH-2*pad)/3).toFixed(1)+'" stroke="#F0F0F0" stroke-width="1"/>').join('')
+    + '<path d="'+area+'" fill="#FFF7E6" opacity=".8"/>'
+    + '<polyline points="'+poly+'" fill="none" stroke="#FA8C16" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+    + pts.map(p2=>'<circle cx="'+p2[0].toFixed(1)+'" cy="'+p2[1].toFixed(1)+'" r="2.4" fill="#fff" stroke="#FA8C16" stroke-width="1.6"/>').join('')
+    + '</svg><div class="chart-legend"><span><i style="background:#FA8C16"></i>累计迁移量（TB）</span><span>近 7 天 · 每 24h 采样</span></div>';
+
+  const events=[
+    {t:d.hb,w:'心跳上报',n:'速率 '+(d.rate||0)+' Gbps · 温度 '+(d.temp||0)+'°C'},
+    {t:'2026-10-18 02:10',w:'迁移任务分片完成',n:'分片 12/36 校验通过'},
+    {t:'2026-10-17 23:40',w:'网络抖动',n:'重传 3 次后恢复，无数据丢失'},
+    {t:d.since+' 09:00',w:'设备上线',n:'固件 '+d.fw+' · 自检通过'}
+  ];
+
+  const info='<div class="panel-body"><div class="dl">'
+    + '<dt>设备型号</dt><dd>'+MODELS[d.model].name+'</dd>'
+    + '<dt>额定容量</dt><dd>'+d.cap+' TB</dd>'
+    + '<dt>所在仓库</dt><dd>'+esc(d.wh)+'</dd>'
+    + '<dt>部署位置</dt><dd>'+esc(d.site)+'</dd>'
+    + '<dt>上线时间</dt><dd>'+d.since+'</dd>'
+    + '<dt>最后心跳</dt><dd>'+d.hb+'</dd>'
+    + '<dt>归属订单</dt><dd>'+(o?'<a class="link" data-act="open-order" data-id="'+o.id+'">'+o.id+'</a>':'—')+'</dd>'
+    + '</div></div>';
+
+  return head('<span class="mono" style="font-size:18px">'+d.sn+'</span>'+dPill(d),
+      MODELS[d.model].name+' · '+esc(d.site),
+      actions, crumbBack(isOps?'设备库存':'设备管理'))
+    + kpis
+    + '<div class="detail-grid" style="margin-top:16px"><div>'
+      + '<div class="panel"><div class="panel-head"><div class="panel-title">容量与迁移进度</div><span class="cnt">'+d.used.toFixed(1)+' / '+d.cap+' TB</span></div>'
+      + '<div class="panel-body"><div class="bar amber" style="height:6px;margin-bottom:4px"><i style="width:'+p+'%"></i></div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3);margin-bottom:16px"><span>已用 '+p+'%</span><span>剩余 '+(d.cap-d.used).toFixed(1)+' TB</span></div>'
+      + '<div class="chart-box">'+chart+'</div></div></div>'
+      + '<div class="panel"><div class="panel-head"><div class="panel-title">设备事件</div></div><div class="panel-body"><div class="tl">'
+        + events.map((e,i)=>'<div class="tl-item'+(i===0?' hl':'')+'"><div class="tl-t">'+e.w+'</div><div class="tl-m">'+e.t+'</div><div style="font-size:12.5px;color:var(--text-2)">'+e.n+'</div></div>').join('')
+      + '</div></div></div>'
+    + '</div><div>'
+      + '<div class="panel side-card"><div class="panel-head"><div class="panel-title" style="font-size:13px">设备信息</div></div>'+info+'</div>'
+      + '<div class="panel side-card"><div class="panel-head"><div class="panel-title" style="font-size:13px">快捷操作</div></div><div class="panel-body" style="display:flex;flex-direction:column;gap:8px">'
+        + (isOps
+            ? '<button class="btn btn-sm" data-act="restart" data-sn="'+d.sn+'">远程重启</button><button class="btn btn-sm" data-act="repair" data-sn="'+d.sn+'">转维修</button><button class="btn btn-sm btn-danger" data-act="scrap" data-sn="'+d.sn+'">报废登记</button>'
+            : '<button class="btn btn-sm" data-act="restart" data-sn="'+d.sn+'">重启诊断</button><button class="btn btn-sm" data-act="report" data-sn="'+d.sn+'">提交工单</button><button class="btn btn-sm" data-act="contact">联系运维</button>')
+      + '</div></div>'
+    + '</div></div>';
+}
+
+/* ================= 运维 · 库存概览 ================= */
+function opsOverview(){
+  const stock=DB.devices.filter(d=>d.status==='stock');
+  const out=DB.devices.filter(d=>['in_use','shipping','locked'].includes(d.status));
+  const todoCount=DB.orders.filter(o=>o.status==='pending').length+DB.devices.filter(d=>['returning','inspecting'].includes(d.status)).length+DB.devices.filter(d=>d.status==='repair').length;
+
+  const kpis='<div class="kpi-row">'
+    + '<div class="kpi"><div class="kpi-k"><span>在库可用</span>'+ic('box',15)+'</div><div class="kpi-v">'+stock.length+'<small>台</small></div>'
+      + '<div class="kpi-f">杭州 '+stock.filter(d=>d.wh==='杭州仓').length+' · 上海 '+stock.filter(d=>d.wh==='上海仓').length+' · 广州 '+stock.filter(d=>d.wh==='广州仓').length+'</div></div>'
+    + '<div class="kpi"><div class="kpi-k"><span>已出库</span>'+ic('out',15)+'</div><div class="kpi-v">'+out.length+'<small>台</small></div>'
+      + '<div class="kpi-f">使用中 '+DB.devices.filter(d=>d.status==='in_use').length+' · 在途 '+DB.devices.filter(d=>d.status==='shipping').length+' · 锁定 '+DB.devices.filter(d=>d.status==='locked').length+'</div></div>'
+    + '<div class="kpi"><div class="kpi-k"><span>待处理</span>'+ic('alert',15)+'</div><div class="kpi-v">'+todoCount+'<small>项</small></div>'
+      + '<div class="kpi-f">待受理 '+DB.orders.filter(o=>o.status==='pending').length+' · 待入库 '+DB.devices.filter(d=>d.status==='returning').length+' · 维修 '+DB.devices.filter(d=>d.status==='repair').length+'</div></div>'
+    + '</div>';
+
+  const todos='<div class="panel"><div class="panel-head"><div class="panel-title">待处理事项</div><span class="cnt">按优先级排序</span></div><div class="panel-body tight">'
+    + '<div class="todo" data-act="nav" data-page="opsorders"><div class="todo-ic" style="background:#E6F4FF;color:#1677FF">'+ic('file',15)+'</div>'
+      + '<div class="todo-b"><div class="todo-t">待受理订单</div><div class="todo-s">客户已提交，需确认库存并出库</div></div><span class="todo-n">'+DB.orders.filter(o=>o.status==='pending').length+'</span></div>'
+    + '<div class="todo" data-act="nav" data-page="inventory" data-filter="returning"><div class="todo-ic" style="background:#FFF7E6;color:#FA8C16">'+ic('in',15)+'</div>'
+      + '<div class="todo-b"><div class="todo-t">待入库设备</div><div class="todo-s">客户已寄回，等待签收与检测</div></div><span class="todo-n">'+DB.devices.filter(d=>d.status==='returning').length+'</span></div>'
+    + '<div class="todo" data-act="nav" data-page="inventory" data-filter="returning"><div class="todo-ic" style="background:#FFF7E6;color:#FA8C16">'+ic('refresh',15)+'</div>'
+      + '<div class="todo-b"><div class="todo-t">检测中设备</div><div class="todo-s">检测通过后需恢复上架</div></div><span class="todo-n">'+DB.devices.filter(d=>d.status==='inspecting').length+'</span></div>'
+    + '<div class="todo" data-act="nav" data-page="inventory" data-filter="repair"><div class="todo-ic" style="background:#FFF1F0;color:#FF4D4F">'+ic('wrench',15)+'</div>'
+      + '<div class="todo-b"><div class="todo-t">维修中设备</div><div class="todo-s">超过 7 天未修复将触发库存预警</div></div><span class="todo-n">'+DB.devices.filter(d=>d.status==='repair').length+'</span></div>'
+    + '</div></div>';
+
+  const whs=['杭州仓','上海仓','广州仓'];
+  const whTbl='<div class="panel"><div class="panel-head"><div class="panel-title">仓库分布</div><span class="link" data-act="nav" data-page="inventory">设备库存 ›</span></div>'
+    + '<div class="wh-row h"><span>仓库</span><span>在库可用</span><span>已出库</span><span>待入库</span><span>容量占用</span></div>'
+    + whs.map(w=>{
+        const ds=DB.devices.filter(d=>d.wh===w);
+        const s=ds.filter(d=>d.status==='stock').length;
+        const o2=ds.filter(d=>['in_use','shipping','locked'].includes(d.status)).length;
+        const r=ds.filter(d=>['returning','inspecting'].includes(d.status)).length;
+        const used=ds.reduce((a,d)=>a+d.cap,0);
+        const occ=Math.min(100,Math.round(ds.length/8*100));
+        return '<div class="wh-row"><span>'+w+'</span><span class="mono">'+s+' 台</span><span class="mono">'+o2+' 台</span><span class="mono">'+r+' 台</span>'
+          + '<div class="bar-row"><div class="bar" style="width:96px"><i style="width:'+occ+'%"></i></div><span class="pc">'+occ+'%</span></div></div>';
+      }).join('')
+    + '</div>';
+
+  const mv='<div class="panel"><div class="panel-head"><div class="panel-title">最近出入库</div><span class="link" data-act="nav" data-page="movements">全部记录 ›</span></div>'
+    + '<div class="tbl-scroll"><table class="tbl"><thead><tr><th>时间</th><th>类型</th><th>设备 SN</th><th>关联订单</th><th>操作人</th></tr></thead><tbody>'
+    + DB.moves.slice(0,5).map(m=>'<tr><td data-l="时间" class="mono muted">'+m.t+'</td><td data-l="类型">'+typeTag(m.type)+'</td><td data-l="设备" class="mono">'+m.sn+'</td><td data-l="订单" class="mono muted">'+m.order+'</td><td data-l="操作人">'+m.by+'</td></tr>').join('')
+    + '</tbody></table></div></div>';
+
+  return head('库存概览','华东设备运营组 · '+DB.devices.length+' 台在册设备 · 数据截至 16:24',
+      '<button class="btn" data-act="export">'+ic('down',14)+'库存报表</button><button class="btn btn-primary" data-act="nav" data-page="inventory">管理库存</button>')
+    + kpis
+    + '<div class="detail-grid"><div>'+whTbl+mv+'</div><div>'+todos+'</div></div>';
+}
+function typeTag(t){
+  const map={'入库':'amber','出库':'blue','上架':'green','下架':'gray','维修':'red','报废':'gray'};
+  return pill(map[t]||'gray',t);
+}
+
+/* ================= 运维 · 设备库存 ================= */
+const INV_TABS=[
+  {k:'all',lab:'全部'},
+  {k:'stock',lab:'在库可用'},
+  {k:'out',lab:'已出库'},
+  {k:'returning',lab:'待入库'},
+  {k:'repair',lab:'维修'},
+  {k:'offshelf',lab:'已下架'}
+];
+function invFilter(d){
+  const k=ui.filters.inv;
+  if(k==='stock') return d.status==='stock';
+  if(k==='out') return ['in_use','shipping','locked'].includes(d.status);
+  if(k==='returning') return ['returning','inspecting'].includes(d.status);
+  if(k==='repair') return d.status==='repair';
+  if(k==='offshelf') return ['offshelf','scrapped'].includes(d.status);
+  return true;
+}
+function inventory(){
+  let list=DB.devices.filter(invFilter);
+  if(ui.invModel) list=list.filter(d=>d.model===ui.invModel);
+  if(ui.invWh) list=list.filter(d=>d.wh===ui.invWh);
+  const q=(ui.q.inv||'').trim().toLowerCase();
+  if(q) list=list.filter(d=>(d.sn+(d.order||'')).toLowerCase().includes(q));
+
+  const tabs=INV_TABS.map(t=>{
+    const n=DB.devices.filter(d=>{
+      if(t.k==='all') return true;
+      if(t.k==='stock') return d.status==='stock';
+      if(t.k==='out') return ['in_use','shipping','locked'].includes(d.status);
+      if(t.k==='returning') return ['returning','inspecting'].includes(d.status);
+      if(t.k==='repair') return d.status==='repair';
+      return ['offshelf','scrapped'].includes(d.status);
+    }).length;
+    return '<button class="chip'+(ui.filters.inv===t.k?' on':'')+'" data-act="filter-inv" data-k="'+t.k+'">'+t.lab+'<b>'+n+'</b></button>';
+  }).join('');
+
+  const rows=list.map(d=>{
+    const sel=ui.selected.has(d.sn);
+    let op='';
+    if(d.status==='stock') op='<a class="link" data-act="unshelve" data-sn="'+d.sn+'">下架</a>';
+    else if(d.status==='offshelf') op='<a class="link" data-act="shelve" data-sn="'+d.sn+'">上架</a>';
+    else if(d.status==='returning') op='<a class="link" data-act="inspect" data-sn="'+d.sn+'">入库检测</a>';
+    else if(d.status==='inspecting') op='<a class="link" data-act="shelve" data-sn="'+d.sn+'">检测通过上架</a>';
+    else if(d.status==='repair') op='<a class="link" data-act="shelve" data-sn="'+d.sn+'">修复上架</a>';
+    return '<tr class="'+(sel?'sel':'')+'">'
+      + '<td class="no-l" style="width:40px"><span class="cb'+(sel?' on':'')+'" data-act="sel" data-sn="'+d.sn+'" role="checkbox" aria-checked="'+sel+'" tabindex="0"></span></td>'
+      + '<td data-l="设备 SN"><div class="mono">'+d.sn+'</div><div class="cell-sub">'+MODELS[d.model].name+'</div></td>'
+      + '<td data-l="状态">'+dPill(d)+'</td>'
+      + '<td data-l="仓库">'+esc(d.wh)+'</td>'
+      + '<td data-l="容量" class="mono">'+d.cap+' TB</td>'
+      + '<td data-l="固件" class="mono muted">'+d.fw+'</td>'
+      + '<td data-l="所属订单" class="mono">'+(d.order?'<a class="link" data-act="ops-order" data-id="'+d.order+'">'+d.order+'</a>':'—')+'</td>'
+      + '<td data-l="最后心跳" class="mono muted">'+d.hb+'</td>'
+      + '<td data-l="操作" class="no-l"><div class="ops">'+op+'<a class="link" data-act="ops-device" data-sn="'+d.sn+'">详情</a></div></td></tr>';
+  }).join('');
+
+  const batch=ui.selected.size
+    ? '<div class="batchbar"><span>已选 <b class="mono">'+ui.selected.size+'</b> 台设备</span><span style="flex:1"></span>'
+      + '<button class="btn btn-sm" data-act="batch-shelve">批量上架</button>'
+      + '<button class="btn btn-sm" data-act="batch-unshelve">批量下架</button>'
+      + '<button class="btn btn-sm btn-ghost" data-act="batch-clear">取消选择</button></div>'
+    : '';
+
+  return head('设备库存','共 '+DB.devices.length+' 台 · 在库可用 '+DB.devices.filter(d=>d.status==='stock').length+' 台 · 待入库 '+DB.devices.filter(d=>d.status==='returning').length+' 台',
+      '<button class="btn" data-act="export">'+ic('down',14)+'导出</button><button class="btn btn-primary" data-act="add-stock">'+ic('plus',14)+'设备入库</button>')
+    + '<div class="panel"><div class="filterbar">'
+      + '<div class="chips">'+tabs+'</div><span class="grow"></span>'
+      + '<select class="select" id="invModel"><option value="">全部型号</option>'
+        + Object.keys(MODELS).map(k=>'<option value="'+k+'"'+(ui.invModel===k?' selected':'')+'>'+MODELS[k].name+'</option>').join('')+'</select>'
+      + '<select class="select" id="invWh"><option value="">全部仓库</option>'
+        + ['杭州仓','上海仓','广州仓'].map(w=>'<option'+(ui.invWh===w?' selected':'')+'>'+w+'</option>').join('')+'</select>'
+      + '<label class="search">'+ic('search',14)+'<input class="input" id="qInv" data-q="inv" placeholder="搜索 SN / 订单号" value="'+esc(ui.q.inv)+'"></label>'
+    + '</div>'+batch
+    + '<div class="tbl-scroll"><table class="tbl"><thead><tr><th style="width:40px"></th><th>设备 SN</th><th>状态</th><th>仓库</th><th>容量</th><th>固件</th><th>所属订单</th><th>最后心跳</th><th style="text-align:right">操作</th></tr></thead>'
+    + '<tbody>'+(list.length?rows:'<tr><td colspan="9">'+emptyBox('没有匹配的设备','调整筛选条件或清空关键词','<button class="btn btn-sm" data-act="reset-inv">清空筛选</button>')+'</td></tr>')+'</tbody></table></div>'
+    + pager(DB.devices.length,list.length)+'</div>';
+}
+
+/* ================= 运维 · 订单受理 ================= */
+function opsOrders(){
+  let list=DB.orders.slice();
+  if(ui.filters.opsorders!=='all') list=list.filter(o=>o.status===ui.filters.opsorders);
+  const q=(ui.q.opsorders||'').trim().toLowerCase();
+  if(q) list=list.filter(o=>(o.id+o.project).toLowerCase().includes(q));
+
+  const tabs=[['all','全部'],['pending','待受理'],['shipping','运输中'],['returning','待入库'],['completed','已完成']]
+    .map(t=>{
+      const n=t[0]==='all'?DB.orders.length:DB.orders.filter(o=>o.status===t[0]).length;
+      return '<button class="chip'+(ui.filters.opsorders===t[0]?' on':'')+'" data-act="filter-opsorders" data-k="'+t[0]+'">'+t[1]+'<b>'+n+'</b></button>';
+    }).join('');
+
+  const rows=list.map(o=>{
+    let act='<a class="link" data-act="ops-order" data-id="'+o.id+'">查看</a>';
+    if(o.status==='pending') act='<a class="link" data-act="accept-order" data-id="'+o.id+'">受理发货</a>'+act;
+    if(o.status==='returning') act='<a class="link" data-act="nav" data-page="inventory" data-filter="returning">登记入库</a>'+act;
+    return '<tr>'
+      + '<td data-l="订单号"><div class="mono">'+o.id+'</div><div class="cell-sub">'+esc(o.project)+'</div></td>'
+      + '<td data-l="客户">示例科技有限公司</td>'
+      + '<td data-l="设备">'+o.qty+' 台 · '+MODELS[o.model].name+'</td>'
+      + '<td data-l="状态">'+oPill(o)+'</td>'
+      + '<td data-l="创建时间" class="mono sec">'+o.createdAt+'</td>'
+      + '<td data-l="确认时间" class="mono '+(o.confirmedAt?'sec':'muted')+'">'+(o.confirmedAt||'—')+'</td>'
+      + '<td data-l="操作" class="no-l"><div class="ops">'+act+'</div></td></tr>';
+  }).join('');
+
+  return head('订单受理','客户订单在这里受理、发货与登记归还',
+      '<button class="btn" data-act="export">'+ic('down',14)+'导出</button>')
+    + '<div class="panel"><div class="filterbar"><div class="chips">'+tabs+'</div><span class="grow"></span>'
+      + '<label class="search">'+ic('search',14)+'<input class="input" id="qOps" data-q="opsorders" placeholder="搜索订单号 / 项目" value="'+esc(ui.q.opsorders)+'"></label>'
+    + '</div><div class="tbl-scroll"><table class="tbl"><thead><tr>'
+      + '<th>订单号</th><th>客户</th><th>设备</th><th>状态</th><th>创建时间</th><th>确认时间</th><th style="text-align:right">操作</th>'
+      + '</tr></thead><tbody>'+(list.length?rows:'<tr><td colspan="7">'+emptyBox('没有匹配的订单','换个状态筛选看看')+'</td></tr>')+'</tbody></table></div>'
+    + pager(DB.orders.length,list.length)+'</div>';
+}
+
+/* ================= 运维 · 出入库记录 ================= */
+function movements(){
+  let list=DB.moves.slice();
+  if(ui.filters.mv!=='all') list=list.filter(m=>m.type===ui.filters.mv);
+  const q=(ui.q.mv||'').trim().toLowerCase();
+  if(q) list=list.filter(m=>(m.sn+m.order+m.by).toLowerCase().includes(q));
+  const types=['all','入库','出库','上架','下架','维修'];
+  const chips=types.map(t=>'<button class="chip'+(ui.filters.mv===t?' on':'')+'" data-act="filter-mv" data-k="'+t+'">'+(t==='all'?'全部':t)+'<b>'+DB.moves.filter(m=>t==='all'||m.type===t).length+'</b></button>').join('');
+  const rows=list.map(m=>'<tr>'
+      + '<td data-l="时间" class="mono">'+m.t+'</td>'
+      + '<td data-l="类型">'+typeTag(m.type)+'</td>'
+      + '<td data-l="设备 SN" class="mono">'+m.sn+'</td>'
+      + '<td data-l="关联订单" class="mono muted">'+(m.order==='—'?'—':'<a class="link" data-act="ops-order" data-id="'+m.order+'">'+m.order+'</a>')+'</td>'
+      + '<td data-l="操作人">'+m.by+'</td>'
+      + '<td data-l="备注" class="sec" style="font-size:12.5px">'+esc(m.note)+'</td></tr>').join('');
+  return head('出入库记录','全量设备流转流水，按时间倒序',
+      '<button class="btn" data-act="export">'+ic('down',14)+'导出流水</button>')
+    + '<div class="panel"><div class="filterbar"><div class="chips">'+chips+'</div><span class="grow"></span>'
+      + '<label class="search">'+ic('search',14)+'<input class="input" id="qMv" data-q="mv" placeholder="搜索 SN / 订单 / 操作人" value="'+esc(ui.q.mv||'')+'"></label>'
+    + '</div><div class="tbl-scroll"><table class="tbl"><thead><tr><th>时间</th><th>类型</th><th>设备 SN</th><th>关联订单</th><th>操作人</th><th>备注</th></tr></thead><tbody>'
+    + (list.length?rows:'<tr><td colspan="6">'+emptyBox('没有匹配的记录','清空筛选后再试')+'</td></tr>')
+    + '</tbody></table></div>'+pager(DB.moves.length,list.length)+'</div>';
+}
+
+/* ================= 路由表 ================= */
+const PAGES = {
+  overview:clientOverview,
+  orders:clientOrders,
+  ordernew:orderNew,
+  orderdetail:orderDetail,
+  devices:clientDevices,
+  devicedetail:()=>devicePage('client'),
+  ops:opsOverview,
+  inventory:inventory,
+  opsorders:opsOrders,
+  movements:movements,
+  opsdevice:()=>devicePage('ops')
+};
+/* ================= 交互层 ================= */
+function nowStr(){
+  const d=new Date(), p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+}
+function todayCode(){
+  const d=new Date(), p=n=>String(n).padStart(2,'0');
+  return ''+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate());
+}
+function addLog(o,what,note,who){
+  o.logs.unshift({t:nowStr(),who:who||('运维 · '+DB.opsUser.name),what:what,note:note||''});
+}
+function addMove(type,sn,order,note){
+  DB.moves.unshift({t:nowStr(),type:type,sn:sn,order:order||'—',by:DB.opsUser.name,note:note||''});
+}
+function syncOrder(o){
+  if(!o || o.status!=='returning') return;
+  const ds=o.devices.map(deviceBySn).filter(Boolean);
+  if(ds.length && ds.every(d=>d.status==='stock')){
+    o.status='completed'; o.completedAt=nowStr();
+    addLog(o,'设备入库检测通过','全部设备已恢复上架，订单关闭');
+    toast('订单 '+o.id+' 已完成');
+  }
+}
+function modalShell(title,body,footer){
+  return '<div class="modal-head"><span>'+title+'</span><button class="x" data-act="close" aria-label="关闭">'+ic('close',16)+'</button></div>'
+    + '<div class="modal-body">'+body+'</div>'
+    + (footer?'<div class="modal-foot">'+footer+'</div>':'');
+}
+function findOrderByDeviceDev(sn){ const d=deviceBySn(sn); return d&&d.order?orderById(d.order):null; }
+
+const ACT = {
+  'toggle-nav':()=>document.body.classList.toggle('nav-open'),
+  'portal':el=>{
+    const p=el.dataset.p;
+    if(p===ui.portal) return;
+    ui.portal=p; ui.history=[]; ui.selected.clear(); ui.tab='devices';
+    go(PAGE_OF_PORTAL[p]);
+  },
+  'nav':el=>{
+    if(el.dataset.filter){ ui.filters.inv=el.dataset.filter; }
+    if(el.dataset.page==='orders') ui.filters.orders=ui.filters.orders||'all';
+    go(el.dataset.page);
+  },
+  'back':()=>back(),
+  'close':()=>closeModal(),
+  'tab':el=>{ ui.tab=el.dataset.t; render(); },
+  'open-order':el=>go('orderdetail',{id:el.dataset.id}),
+  'ops-order':el=>ACT['ops-order-modal'](el),
+  'ops-device':el=>go('opsdevice',{sn:el.dataset.sn}),
+  'open-device':el=>go('devicedetail',{sn:el.dataset.sn}),
+  'new-order':()=>{ ui.wiz.step=1; ui.wiz.agree=false; go('ordernew'); },
+  'filter-orders':el=>{ ui.filters.orders=el.dataset.k; render(); },
+  'reset-orders':()=>{ ui.filters.orders='all'; ui.q.orders=''; render(); },
+  'filter-dev':el=>{ ui.filters.dev=el.dataset.k; render(); },
+  'reset-dev':()=>{ ui.filters.dev='all'; ui.q.dev=''; render(); },
+  'filter-inv':el=>{ ui.filters.inv=el.dataset.k; render(); },
+  'reset-inv':()=>{ ui.filters.inv='all'; ui.invModel=''; ui.invWh=''; ui.q.inv=''; render(); },
+  'filter-opsorders':el=>{ ui.filters.opsorders=el.dataset.k; render(); },
+  'filter-mv':el=>{ ui.filters.mv=el.dataset.k; render(); },
+
+  /* 向导 */
+  'wiz-model':el=>{ ui.wiz.form.model=el.dataset.m; ui.wiz.form.qty=Math.min(ui.wiz.form.qty,5); render(); },
+  'wiz-qty':el=>{
+    const d=parseInt(el.dataset.d,10);
+    ui.wiz.form.qty=Math.max(1,Math.min(5,ui.wiz.form.qty+d));
+    render();
+  },
+  'wiz-days':el=>{ ui.wiz.form.days=parseInt(el.dataset.d,10); render(); },
+  'wiz-window':el=>{ ui.wiz.form.window=el.dataset.w; render(); },
+  'wiz-agree':()=>{ ui.wiz.agree=!ui.wiz.agree; render(); },
+  'wiz-next':()=>{
+    const f=ui.wiz.form;
+    if(ui.wiz.step===1 && !f.site.trim()){ toast('请填写交付站点'); const el=$('#wzSite'); if(el) el.focus(); return; }
+    if(ui.wiz.step===2){
+      const n=parseFloat(f.dataSize);
+      if(!(n>=1&&n<=200)){ toast('预估数据量需在 1–200 TB 之间'); const el=$('#wzData'); if(el) el.focus(); return; }
+    }
+    ui.wiz.step=Math.min(3,ui.wiz.step+1); render(); window.scrollTo({top:0});
+  },
+  'wiz-prev':()=>{ ui.wiz.step=Math.max(1,ui.wiz.step-1); render(); },
+  'wiz-submit':()=>{
+    const f=ui.wiz.form;
+    if(!f.project.trim()){ toast('请填写项目名称'); const el=$('#wzProject'); if(el) el.focus(); return; }
+    if(!f.contact.trim()){ toast('请填写联系人'); const el=$('#wzContact'); if(el) el.focus(); return; }
+    if(!ui.wiz.agree){ toast('请先勾选租用与数据安全条款'); return; }
+    const pool=DB.devices.filter(d=>d.model===f.model && d.status==='stock');
+    if(pool.length<f.qty){ toast('该型号在库不足 '+f.qty+' 台，请联系运维调拨'); return; }
+    const chosen=pool.slice(0,f.qty);
+    const id='DM-'+todayCode()+'-'+String(++DB.seq).padStart(4,'0');
+    const cost=wizCost();
+    const o={
+      id:id, model:f.model, qty:f.qty, status:'pending',
+      createdAt:nowStr(), shippedAt:null, confirmedAt:null, returnAt:null, completedAt:null,
+      dueAt:(function(){ const d=new Date(); d.setDate(d.getDate()+f.days); return d.toISOString().slice(0,10); })(),
+      site:f.site, project:f.project, dataSize:parseFloat(f.dataSize), source:f.source, region:f.region,
+      contact:f.contact, phone:f.phone, amount:cost.total, devices:chosen.map(d=>d.sn), logs:[]
+    };
+    chosen.forEach(d=>{ d.status='locked'; d.order=id; });
+    DB.orders.unshift(o);
+    addLog(o,'提交订单',MODELS[f.model].name+' × '+f.qty+' 台 · '+f.site,'客户');
+    ui.wiz.step=1; ui.wiz.agree=false;
+    go('orderdetail',{id:id});
+    toast('订单已提交，等待运维受理');
+  },
+  rebuy:el=>{
+    const o=orderById(el.dataset.id); if(!o) return;
+    ui.wiz.form.model=o.model; ui.wiz.form.qty=o.qty; ui.wiz.form.project=o.project;
+    ui.wiz.form.site=o.site; ui.wiz.form.dataSize=o.dataSize; ui.wiz.form.source=o.source; ui.wiz.form.region=o.region;
+    ui.wiz.step=1; ui.wiz.agree=false; go('ordernew');
+  },
+
+  /* 客户动作 */
+  'confirm-receipt':el=>{
+    const o=orderById(el.dataset.id); if(!o) return;
+    openModal(modalShell('确认收货 · '+o.id,
+      '<div class="notice notice-info" style="margin-bottom:14px">'+ic('info',15)+'<div>请核对箱内设备数量与清单一致，上电自检通过后再确认。确认后将启动数据迁移计费。</div></div>'
+      + '<div class="dl" style="margin-bottom:16px"><dt>订单设备</dt><dd>'+o.qty+' 台 · '+MODELS[o.model].name+'</dd>'
+      + '<dt>设备 SN</dt><dd class="mono">'+o.devices.join('<br>')+'</dd>'
+      + '<dt>交付站点</dt><dd>'+esc(o.site)+'</dd></div>'
+      + '<label class="check" id="rcvChk"><i></i><span>设备数量与清单一致，且已完成上电自检</span></label>',
+      '<button class="btn" data-act="close">取消</button><button class="btn btn-primary" data-act="do-receipt" data-id="'+o.id+'">确认收货</button>'));
+    document.querySelector('#rcvChk').addEventListener('click',function(){ this.classList.toggle('on'); });
+  },
+  'do-receipt':el=>{
+    const chk=document.querySelector('#rcvChk');
+    if(chk && !chk.classList.contains('on')){ toast('请先勾选设备核对确认'); return; }
+    const o=orderById(el.dataset.id); if(!o) return;
+    o.status='using'; o.confirmedAt=nowStr();
+    o.devices.map(deviceBySn).forEach(d=>{ if(d){ d.status='in_use'; d.since=nowStr().slice(0,10); d.hb=nowStr(); d.temp=38; d.rate=1.1; } });
+    addLog(o,'确认收货','设备上电自检通过，迁移任务排队中','客户');
+    closeModal(); render(); toast('已确认收货，迁移任务将在夜间窗口启动');
+  },
+  'return-device':el=>{
+    const o=orderById(el.dataset.id); if(!o) return;
+    openModal(modalShell('申请归还 · '+o.id,
+      '<div class="notice notice-amber" style="margin-bottom:14px">'+ic('alert',15)+'<div>归还后设备将在运维入库检测通过时关闭订单。请先完成数据校验并擦除本地缓存。</div></div>'
+      + '<div class="dl" style="margin-bottom:14px"><dt>寄回地址</dt><dd>杭州市滨江区江陵路 88 号 3 号仓<br>收货人：张磊 · 0571-8888 6621</dd>'
+      + '<dt>归还设备</dt><dd>'+o.qty+' 台（使用原防震箱寄回）</dd>'
+      + '<dt>运费</dt><dd>平台承担，寄出后回填运单号</dd></div>'
+      + '<div class="field"><label>物流单号（选填）</label><input class="input" id="retTrack" placeholder="例如：SF7788990011"></div>'
+      + '<label class="check" id="retChk" style="margin-top:10px"><i></i><span>数据已校验完成，并已执行本地数据擦除</span></label>',
+      '<button class="btn" data-act="close">取消</button><button class="btn btn-primary" data-act="do-return" data-id="'+o.id+'">提交归还申请</button>'));
+    document.querySelector('#retChk').addEventListener('click',function(){ this.classList.toggle('on'); });
+  },
+  'do-return':el=>{
+    const chk=document.querySelector('#retChk');
+    if(chk && !chk.classList.contains('on')){ toast('请先确认数据校验与擦除'); return; }
+    const o=orderById(el.dataset.id); if(!o) return;
+    const track=document.querySelector('#retTrack');
+    o.status='returning'; o.returnAt=nowStr();
+    o.devices.map(deviceBySn).forEach(d=>{ if(d){ d.status='returning'; d.rate=0; d.hb=nowStr(); } });
+    addLog(o,'申请归还设备',track&&track.value?('运单 '+track.value):'待回填运单号','客户');
+    closeModal(); render(); toast('归还申请已提交，等待运维入库检测');
+  },
+  'cancel-order':el=>{
+    const o=orderById(el.dataset.id); if(!o) return;
+    openModal(modalShell('取消订单 · '+o.id,
+      '<div style="margin-bottom:12px">订单取消后已锁定设备将释放回库存。确认取消？</div>'
+      + '<div class="field"><label>取消原因</label><select class="select" id="cancelReason"><option>项目排期变更</option><option>设备型号选错</option><option>改用专线上传</option><option>其他</option></select></div>',
+      '<button class="btn" data-act="close">暂不取消</button><button class="btn btn-danger" data-act="do-cancel" data-id="'+o.id+'">确认取消</button>'));
+  },
+  'do-cancel':el=>{
+    const o=orderById(el.dataset.id); if(!o) return;
+    o.status='cancelled';
+    o.devices.map(deviceBySn).forEach(d=>{ if(d){ d.status='stock'; d.order=null; } });
+    const r=document.querySelector('#cancelReason');
+    addLog(o,'取消订单',r?r.value:'','客户');
+    closeModal(); render(); toast('订单已取消，设备已释放回库存');
+  },
+  'swap-device':el=>ACT['swap-one']({dataset:{id:el.dataset.id,sn:(orderById(el.dataset.id).devices[0]||'')}}),
+  'swap-one':el=>{
+    const o=orderById(el.dataset.id); if(!o) return;
+    const cur=el.dataset.sn;
+    const pool=DB.devices.filter(d=>d.model===o.model && d.status==='stock');
+    const opts=pool.map(d=>'<label class="opt" style="display:block;margin-bottom:8px">'
+      + '<input type="radio" name="swapDev" value="'+d.sn+'" style="margin-right:8px" '+(pool.length===1?'checked':'')+'>'
+      + '<span class="mono">'+d.sn+'</span><div class="opt-c">'+d.wh+' · 固件 '+d.fw+' · 已用 '+d.used+' TB</div></label>').join('');
+    const body='<div class="notice notice-info" style="margin-bottom:14px">'+ic('info',15)+'<div>更换将保留原订单与租期，新设备 24 小时内发出。原设备故障件需装箱寄回。</div></div>'
+      + '<div class="dl" style="margin-bottom:14px"><dt>更换设备</dt><dd class="mono">'+cur+'</dd><dt>故障现象</dt><dd>迁移速率持续低于 0.2 Gbps，多次重启未恢复</dd></div>'
+      + '<div class="field"><label>选择替换设备（'+pool.length+' 台可用）</label>'
+      + (pool.length?opts:'<div class="notice notice-gray">'+ic('alert',15)+'<div>该型号暂无在库可用设备，请联系运维调拨。</div></div>')
+      + '</div>'
+      + '<div class="field"><label>更换原因</label><select class="select" id="swapReason"><option>设备硬件故障</option><option>容量不足，需升级型号</option><option>现场安装不匹配</option></select></div>';
+    openModal(modalShell('申请更换设备 · '+o.id, body,
+      '<button class="btn" data-act="close">取消</button>'
+      + '<button class="btn btn-primary" data-act="do-swap" data-id="'+o.id+'" data-sn="'+cur+'" '+(pool.length?'':'disabled')+'>提交更换</button>'));
+  },
+  'do-swap':el=>{
+    const o=orderById(el.dataset.id); if(!o) return;
+    const checked=document.querySelector('input[name="swapDev"]:checked');
+    if(!checked){ toast('请选择替换设备'); return; }
+    const oldSn=el.dataset.sn, newSn=checked.value;
+    const oldD=deviceBySn(oldSn), newD=deviceBySn(newSn);
+    if(oldD){ oldD.status='repair'; oldD.order=null; }
+    if(newD){ newD.status='in_use'; newD.order=o.id; newD.since=nowStr().slice(0,10); newD.hb=nowStr(); newD.temp=37; newD.rate=1.05; }
+    o.devices=o.devices.map(s=>s===oldSn?newSn:s);
+    addLog(o,'申请更换设备','原 '+oldSn+' → 新 '+newSn);
+    addMove('出库',newSn,o.id,'故障换机');
+    addMove('维修',oldSn,o.id,'客户报障，返修');
+    closeModal(); render(); toast('更换已受理，新设备将从 '+ (newD?newD.wh:'仓库') +' 发出');
+  },
+  'logistics':el=>{
+    const o=orderById(el.dataset.id); if(!o) return;
+    const steps=[
+      {t:o.returnAt||o.shippedAt||o.createdAt,w:o.status==='returning'?'客户已寄出':'设备已发出',n:'顺丰 SF7788990011 · 杭州仓'},
+      {t:o.shippedAt||o.createdAt,w:'运维拣货出库',n:'设备已锁定并完成出库扫描'},
+      {t:o.createdAt,w:'订单创建',n:'等待运维受理'}
+    ].filter(s=>s.t).sort((a,b)=>a.t<b.t?1:-1);
+    openModal(modalShell('物流与流转 · '+o.id,
+      '<div class="tl">'+steps.map((s,i)=>'<div class="tl-item'+(i===0?' hl':'')+'"><div class="tl-t">'+s.w+'</div><div class="tl-m">'+s.t+'</div><div style="font-size:12.5px;color:var(--text-2)">'+s.n+'</div></div>').join('')+'</div>',
+      '<button class="btn" data-act="close">关闭</button>'));
+  },
+  'receipt':()=>toast('回单已生成，下载已开始'),
+  'contact':()=>openModal(modalShell('联系运维',
+      '<div class="dl"><dt>值班电话</dt><dd>0571-8888 6621（7×24）</dd><dt>企业专属群</dt><dd>钉钉群「示例客户 · 数据迁移平台」</dd><dt>响应时效</dt><dd>受理 2 小时内 · 故障 4 小时内</dd></div>',
+      '<button class="btn" data-act="close">关闭</button>')),
+  'help':()=>openModal(modalShell('使用指引',
+      '<div style="line-height:22px">'
+      + '<b>下单</b>：创建订单 → 选型号与租期 → 填写迁移配置 → 提交，等待运维受理。<br><br>'
+      + '<b>使用</b>：设备送达后「确认收货」，设备进入使用中，可查看实时迁移速率与容量。<br><br>'
+      + '<b>归还</b>：订单详情点「申请归还」，寄出后在运维后台「设备库存」完成入库检测与上架，订单自动完成。'
+      + '</div>',
+      '<button class="btn btn-primary" data-act="close">知道了</button>')),
+  'demo-tip':()=>openModal(modalShell('原型演示路径',
+      '<div style="line-height:24px">'
+      + '<span class="tag">1</span> 客户控制台 →「创建订单」→ 三步向导 → 提交<br>'
+      + '<span class="tag">2</span> 切到「运维后台」→ 订单受理 →「受理发货」<br>'
+      + '<span class="tag">3</span> 回客户控制台 → 订单详情 →「确认收货」<br>'
+      + '<span class="tag">4</span> 订单详情 →「申请归还」<br>'
+      + '<span class="tag">5</span> 运维后台 → 设备库存 →「入库检测」→「检测通过上架」<br>'
+      + '<span class="tag">6</span> 回客户控制台，订单状态自动变为「已完成」'
+      + '</div>',
+      '<button class="btn btn-primary" data-act="close">开始体验</button>')),
+  'export':()=>toast('导出任务已创建，完成后将发送到企业邮箱'),
+  'report':el=>toast('工单已提交：'+el.dataset.sn+'，运维将在 4 小时内响应'),
+  'restart':el=>toast('已下发重启指令：'+el.dataset.sn),
+
+  /* 运维动作 */
+  'accept-order':el=>{
+    const o=orderById(el.dataset.id); if(!o) return;
+    const devs=o.devices.map(deviceBySn).filter(Boolean);
+    openModal(modalShell('受理发货 · '+o.id,
+      '<div class="notice notice-info" style="margin-bottom:14px">'+ic('info',15)+'<div>受理后设备将锁定并出库，客户签收确认后开始计费。</div></div>'
+      + '<div class="dl" style="margin-bottom:14px"><dt>客户</dt><dd>示例科技有限公司 · '+esc(o.contact)+'</dd>'
+      + '<dt>交付站点</dt><dd>'+esc(o.site)+'</dd><dt>设备</dt><dd>'+o.qty+' 台 · '+MODELS[o.model].name+'</dd></div>'
+      + '<div class="field"><label>分配设备（已按型号锁定）</label><div style="font-family:var(--mono);font-size:12.5px;line-height:22px;color:var(--text-2)">'
+      + (devs.length?devs.map(d=>d.sn+' · '+d.wh).join('<br>'):'库存不足，需先调拨')+'</div></div>',
+      '<button class="btn" data-act="close">取消</button><button class="btn btn-primary" data-act="do-accept" data-id="'+o.id+'">确认受理并发货</button>'));
+  },
+  'do-accept':el=>{
+    const o=orderById(el.dataset.id); if(!o) return;
+    o.status='shipping'; o.shippedAt=nowStr();
+    o.devices.map(deviceBySn).forEach(d=>{ if(d){ d.status='shipping'; d.rate=0; d.hb=nowStr(); } });
+    addLog(o,'订单受理，设备出库','杭州仓 → '+o.site);
+    o.devices.forEach(sn=>addMove('出库',sn,o.id,'受理发货 '+o.site));
+    closeModal(); render(); toast('已受理并发货，等待客户确认收货');
+  },
+  'ops-order-modal':el=>{
+    const o=orderById(el.dataset.id); if(!o) return;
+    const ds=o.devices.map(deviceBySn).filter(Boolean);
+    openModal(modalShell('订单 '+o.id,
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+oPill(o)+'<span class="muted" style="font-size:12.5px">'+esc(o.project)+'</span></div>'
+      + '<div class="dl"><dt>客户</dt><dd>示例科技有限公司 · '+esc(o.contact)+'</dd><dt>设备数量</dt><dd>'+o.qty+' 台 · '+MODELS[o.model].name+'</dd>'
+      + '<dt>创建时间</dt><dd class="mono">'+o.createdAt+'</dd><dt>确认时间</dt><dd class="mono">'+(o.confirmedAt||'—')+'</dd>'
+      + '<dt>设备 SN</dt><dd class="mono">'+(ds.length?ds.map(d=>d.sn+'（'+DS[d.status].lab+'）').join('<br>'):'未分配')+'</dd></div>'
+      + '<div style="margin-top:18px">'+railHTML(o,true)+'</div>',
+      (o.status==='pending'?'<button class="btn btn-primary" data-act="accept-order" data-id="'+o.id+'">受理发货</button>':'')
+      + '<button class="btn" data-act="close">关闭</button>'));
+  },
+  'sel':el=>{
+    const sn=el.dataset.sn;
+    if(ui.selected.has(sn)) ui.selected.delete(sn); else ui.selected.add(sn);
+    render();
+  },
+  'batch-shelve':()=>{
+    let n=0;
+    ui.selected.forEach(sn=>{
+      const d=deviceBySn(sn);
+      if(d && ['offshelf','inspecting','repair'].includes(d.status)){
+        d.status='stock'; d.hb=nowStr(); addMove('上架',sn,d.order||'—','批量上架'); n++;
+      }
+    });
+    ui.selected.clear(); render(); toast(n?('已上架 '+n+' 台设备'):'所选设备当前状态不可上架');
+  },
+  'batch-unshelve':()=>{
+    let n=0;
+    ui.selected.forEach(sn=>{
+      const d=deviceBySn(sn);
+      if(d && d.status==='stock'){ d.status='offshelf'; addMove('下架',sn,d.order||'—','批量下架'); n++; }
+    });
+    ui.selected.clear(); render(); toast(n?('已下架 '+n+' 台设备'):'所选设备当前状态不可下架');
+  },
+  'batch-clear':()=>{ ui.selected.clear(); render(); },
+  'shelve':el=>{
+    const d=deviceBySn(el.dataset.sn); if(!d) return;
+    const from=d.status;
+    d.status='stock'; d.hb=nowStr(); d.temp=24;
+    addMove('上架',d.sn,d.order||'—',from==='inspecting'?'入库检测通过':'恢复可用');
+    if(d.order) syncOrder(orderById(d.order));
+    render(); toast(d.sn+' 已上架，状态：在库可用');
+  },
+  'unshelve':el=>{
+    const d=deviceBySn(el.dataset.sn); if(!d) return;
+    d.status='offshelf';
+    addMove('下架',d.sn,d.order||'—','暂停出租');
+    render(); toast(d.sn+' 已下架');
+  },
+  'inspect':el=>{
+    const d=deviceBySn(el.dataset.sn); if(!d) return;
+    d.status='inspecting';
+    addMove('入库',d.sn,d.order||'—','签收并开始检测');
+    render(); toast('已登记入库，'+d.sn+' 检测中');
+  },
+  'repair':el=>{
+    const d=deviceBySn(el.dataset.sn); if(!d) return;
+    d.status='repair';
+    addMove('维修',d.sn,d.order||'—','转维修区');
+    render(); toast(d.sn+' 已转维修');
+  },
+  'scrap':el=>{
+    const d=deviceBySn(el.dataset.sn); if(!d) return;
+    d.status='scrapped';
+    addMove('报废',d.sn,d.order||'—','固定资产报废');
+    render(); toast(d.sn+' 已登记报废');
+  },
+  'add-stock':()=>{
+    openModal(modalShell('设备入库',
+      '<div class="field-row"><div class="field"><label>设备 SN</label><input class="input" id="addSn" placeholder="例如：DM3-2402-0190"></div>'
+      + '<div class="field"><label>型号</label><select class="select" id="addModel">'+Object.keys(MODELS).map(k=>'<option value="'+k+'">'+MODELS[k].name+'</option>').join('')+'</select></div></div>'
+      + '<div class="field-row"><div class="field"><label>仓库</label><select class="select" id="addWh"><option>杭州仓</option><option>上海仓</option><option>广州仓</option></select></div>'
+      + '<div class="field"><label>固件版本</label><input class="input" id="addFw" value="4.1.0"></div></div>'
+      + '<div class="notice notice-gray">'+ic('info',15)+'<div>入库后设备状态为「在库可用」，可立即用于订单分配。</div></div>',
+      '<button class="btn" data-act="close">取消</button><button class="btn btn-primary" data-act="do-add-stock">确认入库</button>'));
+  },
+  'do-add-stock':()=>{
+    const sn=(document.querySelector('#addSn').value||'').trim().toUpperCase();
+    if(!sn){ toast('请填写设备 SN'); return; }
+    if(deviceBySn(sn)){ toast('该 SN 已存在'); return; }
+    const model=document.querySelector('#addModel').value;
+    const wh=document.querySelector('#addWh').value;
+    const fw=document.querySelector('#addFw').value||'4.1.0';
+    DB.devices.unshift({sn:sn,model:model,status:'stock',wh:wh,fw:fw,used:0,cap:MODELS[model].cap,order:null,hb:nowStr(),site:wh,since:nowStr().slice(0,10),temp:24,rate:0});
+    addMove('入库',sn,'—','新设备入库');
+    closeModal(); render(); toast(sn+' 已入库');
+  }
+};
+
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');
+  if(!el) return;
+  const fn=ACT[el.dataset.act];
+  if(!fn) return;
+  e.preventDefault();
+  fn(el);
+});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ') return;
+  const el=e.target.closest('[data-act]');
+  if(el && el.getAttribute('tabindex')==='0'){ e.preventDefault(); el.click(); }
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.q){ ui.q[t.dataset.q]=t.value; render(); return; }
+  if(t.dataset.bind && ui.page==='ordernew'){
+    ui.wiz.form[t.dataset.bind]=t.value;
+    if(t.dataset.bind==='dataSize') updateWizSum();
+  }
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='invModel'){ ui.invModel=t.value; render(); return; }
+  if(t.id==='invWh'){ ui.invWh=t.value; render(); return; }
+  if(t.dataset.bind && ui.page==='ordernew'){ ui.wiz.form[t.dataset.bind]=t.value; }
+});
+
+/* 初始化 */
+document.body.classList.add('app');
+ui.filters.dev='all'; ui.q.dev=''; ui.filters.mv='all'; ui.q.mv='';
+ui.wiz.form.site='杭州 · 滨江数据中心 A1';
+ui.wiz.form.project='智驾路测数据回传';
+render();
+</script>
+</body>
+</html>
