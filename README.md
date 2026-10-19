@@ -36,6 +36,20 @@ NO_REACTIONS=1 node scripts/run-plugin.js code.js
 
 `run-plugin.js` 只需 Node；`test-html.js` 需要 `jsdom`（脚本自动探测，缺失时提示安装命令）。
 
+## 一键同步
+
+把这个仓库当工作副本改内容时，一条命令完成提交 + 并远程 + 推送：
+
+```bash
+bash scripts/sync.sh                     # 自动生成提交信息
+bash scripts/sync.sh "fix: 调整列表间距"   # 指定提交信息
+SYNC_BRANCH=dev bash scripts/sync.sh     # 指定分支（默认当前分支）
+```
+
+三步：提交本地改动 → `rebase` 并入远程新提交 → 推送。本地与远程改到同一处时，脚本会自动 `git rebase --abort` 回滚并以退出码 1 退出，**不会留下冲突残留，也不会推送半成品**。
+
+也可拷到任意 Git 仓库的 `scripts/` 目录下直接使用。
+
 ## 九个阶段
 
 | Stage | 做什么 | 产出 |
@@ -66,6 +80,7 @@ templates/
 scripts/
   test-html.js              HTML 结构与点击检查
   run-plugin.js             Figma API 模拟层
+  sync.sh                   一键同步（提交 + 并远程 + 推送）
 examples/
   vehicle-data-migration/    完整参考实现（车载数据迁移，11 页双端）
 ```
