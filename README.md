@@ -83,6 +83,8 @@ scripts/
   sync.sh                   一键同步（提交 + 并远程 + 推送）
 examples/
   vehicle-data-migration/    完整参考实现（车载数据迁移，11 页双端）
+docs/
+  manual.html               产品经理视角的操作手册（图文，可打印成 PDF）
 ```
 
 ## 已知边界

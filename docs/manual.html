@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>产品原型生成器 · 操作手册</title>
+<style>
+  :root{
+    --ink:#16181D; --sub:#5A6270; --faint:#8A919E;
+    --line:#E6E8EC; --line-strong:#D2D6DD;
+    --bg:#FFFFFF; --canvas:#F6F7F9;
+    --accent:#0B6E4F; --accent-mid:#128A63; --accent-soft:#E9F4F0;
+    --warn:#96540A; --warn-soft:#FDF4E5; --warn-line:#F0DFC0;
+    --code-bg:#F4F5F7;
+    --mono:"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{
+    margin:0;background:var(--canvas);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    font-size:15px;line-height:1.75;
+  }
+  .page{max-width:1180px;margin:0 auto;padding:0 24px 96px;display:grid;grid-template-columns:212px 1fr;gap:52px}
+  @media(max-width:900px){.page{grid-template-columns:1fr;gap:0;padding:0 18px 64px}}
+
+  /* ---------- 封面 ---------- */
+  .cover{grid-column:1/-1;padding:76px 0 52px;border-bottom:1px solid var(--line)}
+  .eyebrow{font:600 11.5px/1 var(--mono);letter-spacing:.16em;color:var(--accent);text-transform:uppercase;margin-bottom:22px}
+  .cover h1{margin:0;font-size:52px;line-height:1.12;letter-spacing:-.022em;font-weight:700}
+  .cover h1 em{font-style:normal;color:var(--accent)}
+  .lede{margin:18px 0 0;font-size:17px;color:var(--sub);max-width:640px}
+  .meta{margin-top:34px;display:flex;flex-wrap:wrap;gap:0 40px;font-size:13px;color:var(--faint)}
+  .meta b{display:block;color:var(--ink);font-weight:600;margin-top:3px;font-size:13.5px}
+  @media(max-width:900px){.cover h1{font-size:36px}.cover{padding:48px 0 36px}}
+
+  /* ---------- 目录 ---------- */
+  .toc{position:sticky;top:28px;align-self:start;padding-top:56px;font-size:13px}
+  .toc-title{font:600 10.5px/1 var(--mono);letter-spacing:.14em;color:var(--faint);margin-bottom:14px}
+  .toc a{display:block;padding:5px 0 5px 10px;color:var(--sub);text-decoration:none;border-left:2px solid transparent;transition:.15s}
+  .toc a:hover{color:var(--ink);border-left-color:var(--line-strong)}
+  .toc a.on{color:var(--accent);border-left-color:var(--accent);font-weight:600}
+  .toc a span{display:inline-block;width:26px;font:600 11px/1 var(--mono);color:var(--faint)}
+  .toc a.on span{color:var(--accent)}
+  @media(max-width:900px){.toc{display:none}}
+
+  /* ---------- 正文 ---------- */
+  main{padding-top:56px;min-width:0}
+  section{margin-bottom:68px;scroll-margin-top:24px}
+  h2{font-size:27px;line-height:1.3;margin:0 0 6px;letter-spacing:-.015em;font-weight:700;display:flex;align-items:baseline;gap:14px}
+  h2 .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.08em;transform:translateY(-3px)}
+  .sub{margin:0 0 26px;color:var(--sub);font-size:14.5px;padding-bottom:20px;border-bottom:1px solid var(--line)}
+  h3{font-size:16.5px;margin:34px 0 12px;font-weight:650;letter-spacing:-.005em}
+  h4{font-size:14px;margin:22px 0 8px;font-weight:650;color:var(--ink)}
+  p{margin:0 0 14px}
+  ul,ol{margin:0 0 16px;padding-left:22px}
+  li{margin-bottom:7px}
+  li::marker{color:var(--faint)}
+  strong{font-weight:650}
+  code{font-family:var(--mono);font-size:.875em;background:var(--code-bg);padding:1.5px 5px;border-radius:4px;border:1px solid #EBEDF0}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(11,110,79,.28)}
+  a:hover{border-bottom-color:var(--accent)}
+
+  /* ---------- 代码块 ---------- */
+  .cmd{position:relative;margin:14px 0 18px;background:#1C1F26;border-radius:10px;overflow:hidden}
+  .cmd pre{margin:0;padding:16px 52px 16px 18px;overflow-x:auto;color:#E8EAEE;font-family:var(--mono);font-size:12.5px;line-height:1.85}
+  .cmd .c{color:#7C8899}
+  .cmd .k{color:#7FD3AE}
+  .copy{position:absolute;top:9px;right:9px;border:1px solid #3A4048;background:#252A32;color:#AEB6C2;
+        font:500 11px/1 var(--mono);padding:6px 9px;border-radius:6px;cursor:pointer;transition:.15s}
+  .copy:hover{background:#2F3540;color:#fff;border-color:#4B525C}
+  .copy.done{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  /* ---------- 卡片 ---------- */
+  .card{background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:20px 22px;margin:16px 0}
+  .card.acc{border-left:3px solid var(--accent);border-radius:0 11px 11px 0}
+  .card h4{margin-top:0}
+  .card p:last-child,.card ul:last-child{margin-bottom:0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+
+  .note{background:var(--accent-soft);border:1px solid #CDE5DB;border-radius:10px;padding:16px 18px;margin:18px 0;font-size:14px}
+  .note b{color:var(--accent)}
+  .warn{background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:10px;padding:16px 18px;margin:18px 0;font-size:14px}
+  .warn b{color:var(--warn)}
+  .note p:last-child,.warn p:last-child{margin-bottom:0}
+
+  /* ---------- 表格 ---------- */
+  .tw{overflow-x:auto;margin:16px 0 22px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+  th{text-align:left;font-weight:600;font-size:12px;letter-spacing:.03em;color:var(--sub);
+     background:#FAFBFC;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:11px 14px;border-bottom:1px solid #F0F2F5;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.mono{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+  .pill{display:inline-block;font:600 10.5px/1 var(--mono);padding:4px 7px;border-radius:5px;letter-spacing:.04em;white-space:nowrap}
+  .pill.ok{background:var(--accent-soft);color:var(--accent)}
+  .pill.mid{background:#EEF1F6;color:#4B5563}
+  .pill.no{background:#FBECEC;color:#9B2C2C}
+
+  /* ---------- 步骤 ---------- */
+  .steps{counter-reset:s;margin:20px 0 8px;padding:0;list-style:none}
+  .steps>li{counter-increment:s;position:relative;padding:0 0 24px 44px;border-left:2px solid var(--line);margin-left:13px}
+  .steps>li:last-child{border-left-color:transparent;padding-bottom:0}
+  .steps>li::before{content:counter(s);position:absolute;left:-15px;top:-2px;width:28px;height:28px;border-radius:50%;
+    background:var(--bg);border:2px solid var(--line-strong);color:var(--sub);
+    font:600 12.5px/24px var(--mono);text-align:center}
+  .steps>li.active::before{border-color:var(--accent);color:var(--accent)}
+  .steps h4{margin:0 0 6px;font-size:14.5px}
+  .steps p{margin:0 0 8px;font-size:14px;color:var(--sub)}
+
+  /* ---------- 图 ---------- */
+  figure{margin:22px 0 26px;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:22px 20px 14px}
+  figure svg{display:block;width:100%;height:auto}
+  figcaption{margin-top:12px;font-size:12.5px;color:var(--faint);text-align:center}
+
+  /* ---------- 好/坏对照 ---------- */
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+  @media(max-width:760px){.cmp{grid-template-columns:1fr}}
+  .cmp>div{border-radius:10px;padding:16px 18px;font-size:13.5px;line-height:1.7}
+  .cmp .bad{background:#FCF1F1;border:1px solid #F0D6D6}
+  .cmp .good{background:var(--accent-soft);border:1px solid #CDE5DB}
+  .cmp .tag{display:block;font:600 11px/1 var(--mono);letter-spacing:.08em;margin-bottom:9px}
+  .cmp .bad .tag{color:#9B2C2C}
+  .cmp .good .tag{color:var(--accent)}
+
+  hr.sep{border:none;border-top:1px solid var(--line);margin:34px 0}
+
+  /* ---------- 速查卡 ---------- */
+  .cheat{background:#16181D;color:#E8EAEE;border-radius:14px;padding:30px 32px;margin:22px 0}
+  .cheat h3{color:#fff;margin:0 0 18px;font-size:15px}
+  .cheat .row{display:grid;grid-template-columns:132px 1fr;gap:16px;padding:13px 0;border-bottom:1px solid #2A2E36;font-size:13.5px}
+  .cheat .row:last-child{border-bottom:none}
+  .cheat .row span{color:#8B94A3;font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;padding-top:2px}
+  .cheat code{background:#23272F;border-color:#31363F;color:#9FE3C4}
+
+  footer{grid-column:1/-1;margin-top:40px;padding-top:26px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  /* ---------- 打印 ---------- */
+  @page{size:A4;margin:15mm 14mm}
+  @media print{
+    body{background:#fff;font-size:10.5pt;line-height:1.65}
+    .page{display:block;max-width:none;padding:0}
+    .toc,.copy{display:none!important}
+    .cover{padding:0 0 26px;border-bottom:1px solid #ddd}
+    .cover h1{font-size:30pt}
+    main{padding-top:26px}
+    section{margin-bottom:26px}
+    h2,.sub,h3,h4{page-break-after:avoid}
+    .steps>li{page-break-inside:avoid}
+    figure,.card,.tw,.cmp,.note,.warn,.cmd,.cheat{page-break-inside:avoid}
+    .cmd{background:#1C1F26!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .cmd pre{white-space:pre-wrap;word-break:break-all;overflow-x:visible;padding-right:16px}
+    .cheat{background:#16181D!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    table{min-width:0;font-size:9pt}
+    a{color:var(--ink);border-bottom:none}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="cover">
+    <div class="eyebrow">Product Prototype Generator · v2.0</div>
+    <h1>产品原型生成器<br><em>操作手册</em></h1>
+    <p class="lede">一段需求，两个可交付出口：能点能演的交互 HTML，和跑一次就在 Figma 里长出原生图层的插件。这份手册写给产品经理——不需要懂代码。</p>
+    <div class="meta">
+      <div>适用对象<b>产品经理 / 交互设计</b></div>
+      <div>前置技能<b>会用浏览器，能复制粘贴</b></div>
+      <div>预计上手<b>5 分钟</b></div>
+      <div>仓库<b>JS-Carrot/product_skills</b></div>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <div class="toc-title">目录</div>
+    <a href="#s0"><span>00</span>它给你什么</a>
+    <a href="#s1"><span>01</span>五种安装方式</a>
+    <a href="#s2"><span>02</span>怎么写需求</a>
+    <a href="#s3"><span>03</span>怎么开口</a>
+    <a href="#s4"><span>04</span>它怎么干活</a>
+    <a href="#s5"><span>05</span>产物怎么用</a>
+    <a href="#s6"><span>06</span>怎么改需求</a>
+    <a href="#s7"><span>07</span>常见问题</a>
+    <a href="#s8"><span>08</span>一页速查</a>
+  </nav>
+
+  <main>
+
+    <!-- ============ 00 ============ -->
+    <section id="s0">
+      <h2><span class="num">00</span>它给你什么</h2>
+      <p class="sub">先搞清楚交付物长什么样，再决定怎么装。</p>
+
+      <p>你给它一段需求描述，它给你三样东西：</p>
+
+      <div class="grid2">
+        <div class="card acc">
+          <h4>① 交互原型（HTML）</h4>
+          <p>单个 <code>.html</code> 文件，双击就能在浏览器打开。页面之间能跳，按钮能点，状态会变，弹窗会弹。可以直接丢到群里给老板和开发看。</p>
+        </div>
+        <div class="card acc">
+          <h4>② Figma 插件</h4>
+          <p>一个文件夹，导入 Figma 桌面端跑一次，11 个画板连同 Auto Layout 和点击连线一起长出来，之后在 Figma 里正常编辑。</p>
+        </div>
+        <div class="card acc" style="grid-column:1/-1">
+          <h4>③ 设计规格文档</h4>
+          <p>需求简报、信息架构、视觉定轨、逐页规格（含状态与跳转）。这是给开发看的东西——接口要什么字段、状态怎么流转、点击去哪，都写在里面。</p>
+        </div>
+      </div>
+
+      <figure>
+        <svg viewBox="0 0 720 246" role="img" aria-label="双出口流程图">
+          <defs>
+            <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3 z" fill="#B7BEC9"/>
+            </marker>
+          </defs>
+          <rect x="8" y="88" width="132" height="62" rx="9" fill="#F6F7F9" stroke="#DDE1E7"/>
+          <text x="74" y="114" text-anchor="middle" font-size="12.5" font-weight="600" fill="#16181D">你的需求</text>
+          <text x="74" y="132" text-anchor="middle" font-size="10.5" fill="#8A919E">一段话 / 一份文档</text>
+          <line x1="140" y1="119" x2="186" y2="119" stroke="#B7BEC9" stroke-width="1.6" marker-end="url(#ar)"/>
+
+          <rect x="190" y="76" width="152" height="86" rx="9" fill="#E9F4F0" stroke="#0B6E4F" stroke-width="1.4"/>
+          <text x="266" y="102" text-anchor="middle" font-size="12.5" font-weight="600" fill="#0B6E4F">同一份规格</text>
+          <text x="266" y="121" text-anchor="middle" font-size="10.5" fill="#3D6B5C">信息架构 · 视觉 token</text>
+          <text x="266" y="137" text-anchor="middle" font-size="10.5" fill="#3D6B5C">页面状态 · 跳转关系</text>
+
+          <path d="M342 119 H386" stroke="#B7BEC9" stroke-width="1.6"/>
+          <path d="M386 119 V52 H424" stroke="#B7BEC9" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+          <path d="M386 119 V186 H424" stroke="#B7BEC9" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+
+          <rect x="428" y="24" width="284" height="56" rx="9" fill="#fff" stroke="#DDE1E7"/>
+          <text x="446" y="47" font-size="12.5" font-weight="600" fill="#16181D">出口 1 · 交互 HTML</text>
+          <text x="446" y="65" font-size="10.5" fill="#8A919E">承载逻辑：状态迁移 / 校验 / 联动 / 空态</text>
+
+          <rect x="428" y="158" width="284" height="56" rx="9" fill="#fff" stroke="#DDE1E7"/>
+          <text x="446" y="181" font-size="12.5" font-weight="600" fill="#16181D">出口 2 · Figma 插件</text>
+          <text x="446" y="199" font-size="10.5" fill="#8A919E">承载结构：原生图层 / Auto Layout / 连线</text>
+
+          <text x="428" y="236" font-size="10.5" fill="#8A919E">两边同源：改规格 → 两侧一起改，不会各说各话</text>
+        </svg>
+        <figcaption>一份规格驱动两个出口，逻辑与结构分开承载</figcaption>
+      </figure>
+
+      <h3>和传统做法比，省在哪</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>做法</th><th>你拿到什么</th><th>代价</th></tr></thead>
+          <tbody>
+            <tr><td>直接画高保真稿</td><td>静态图，点不动</td><td>改一版重画一遍</td></tr>
+            <tr><td>写页面代码再截图</td><td>只有外观，逻辑靠嘴讲</td><td>开发照着猜状态</td></tr>
+            <tr><td>导 <code>.fig</code> 交付</td><td>做不到——私有二进制格式，没有对外写入接口</td><td>—</td></tr>
+            <tr><td><strong>这套方法</strong></td><td>可点的原型 + 可编辑的 Figma 图层 + 规格文档</td><td>先花 2 分钟把需求说清楚</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 01 ============ -->
+    <section id="s1">
+      <h2><span class="num">01</span>五种安装方式</h2>
+      <p class="sub">按你的情况挑一种。不用全做，做完一种就能用。</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>方式</th><th>适合谁</th><th>生效范围</th><th>能不能一键更新</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A · 让 AI 帮你装</strong></td><td>不想碰命令行</td><td>你的所有项目</td><td><span class="pill ok">能</span></td></tr>
+            <tr><td><strong>B · 自己敲一行命令</strong></td><td>会开终端</td><td>你的所有项目</td><td><span class="pill ok">能</span></td></tr>
+            <tr><td><strong>C · 装进项目里</strong></td><td>团队共用同一套</td><td>只有这个项目</td><td><span class="pill ok">能</span></td></tr>
+            <tr><td><strong>D · 下载 ZIP</strong></td><td>公司网络挡了 git</td><td>你选的位置</td><td><span class="pill no">要重下</span></td></tr>
+            <tr><td><strong>E · 不装，临时用</strong></td><td>只想先看看效果</td><td>当次对话</td><td><span class="pill no">不支持</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <p><b>装到哪？</b>这个工具只认两个目录：用户级 <code>~/.workbuddy/skills/</code>（所有项目都能用），项目级 <code>&lt;你的项目&gt;/.workbuddy/skills/</code>（只有这个项目能用）。放错地方它是发现不了的。</p>
+      </div>
+
+      <h3>方式 A · 让 AI 帮你装 <span class="pill ok">推荐</span></h3>
+      <p>不用记命令。打开对话，把下面这句话复制过去：</p>
+      <div class="cmd">
+        <button class="copy" data-copy="帮我把 https://github.com/JS-Carrot/product_skills 这个仓库装成我的用户级 skill，目录名用 product-prototype-generator">复制</button>
+        <pre>帮我把 https://github.com/JS-Carrot/product_skills 这个仓库装成我的用户级 skill，目录名用 product-prototype-generator</pre>
+      </div>
+      <p>它会自动完成克隆、改名、校验。装完你会看到 <code>~/.workbuddy/skills/product-prototype-generator/</code> 这个目录，里面有 <code>SKILL.md</code>、<code>references/</code>、<code>templates/</code>、<code>scripts/</code>、<code>examples/</code>。</p>
+
+      <h3>方式 B · 自己敲一行命令</h3>
+      <p>打开「终端」，粘贴执行：</p>
+      <div class="cmd">
+        <button class="copy" data-copy="git clone git@github.com:JS-Carrot/product_skills.git ~/.workbuddy/skills/product-prototype-generator">复制</button>
+        <pre><span class="c"># 用户级安装：一次装好，所有项目可用</span>
+git clone git@github.com:JS-Carrot/product_skills.git ~/.workbuddy/skills/product-prototype-generator</pre>
+      </div>
+      <p>如果提示 <code>Permission denied (publickey)</code>，说明这台机器还没配 GitHub 的 SSH 密钥。两个办法：换成 HTTPS 地址 <code>https://github.com/JS-Carrot/product_skills.git</code>，或者让 AI 帮你配密钥。</p>
+
+      <h3>方式 C · 装进项目里，团队共用</h3>
+      <p>想让整个团队拉下项目就自带这套能力，装到项目目录，并把它提交进仓库：</p>
+      <div class="cmd">
+        <button class="copy" data-copy="mkdir -p .workbuddy/skills &amp;&amp; git clone git@github.com:JS-Carrot/product_skills.git .workbuddy/skills/product-prototype-generator">复制</button>
+        <pre><span class="c"># 在项目根目录执行</span>
+mkdir -p .workbuddy/skills
+git clone git@github.com:JS-Carrot/product_skills.git .workbuddy/skills/product-prototype-generator
+
+<span class="c"># 别加进 .gitignore，要提交，队友拉下来才有</span>
+git add .workbuddy/skills/product-prototype-generator
+git commit -m "chore: 引入产品原型生成器"</pre>
+      </div>
+      <div class="warn">
+        <p><b>注意：</b>项目级安装会把这 300KB 源码一起提交进你们的业务仓库。如果团队介意，改用方式 A 或 B，各自装在自己的机器上。</p>
+      </div>
+
+      <h3>方式 D · 下载 ZIP（没有 git 也能装）</h3>
+      <ol class="steps">
+        <li><h4>打开仓库页面</h4><p>浏览器进 <a href="https://github.com/JS-Carrot/product_skills">github.com/JS-Carrot/product_skills</a>。</p></li>
+        <li><h4>下载压缩包</h4><p>点右上角绿色的 <strong>Code</strong> 按钮 → <strong>Download ZIP</strong>。</p></li>
+        <li><h4>解压并改名</h4><p>解压得到 <code>product_skills-main</code> 文件夹，<strong>必须改名为</strong> <code>product-prototype-generator</code>。名字错了会失效。</p></li>
+        <li><h4>放到指定目录</h4><p>把整个文件夹拖进 <code>~/.workbuddy/skills/</code>。Mac 上在 Finder 按 <code>⌘⇧G</code>，输入 <code>~/.workbuddy/skills</code> 直达。</p></li>
+      </ol>
+
+      <h3>方式 E · 不装，临时试一次</h3>
+      <p>只想先看看它出的东西合不合口味，可以完全不安装：</p>
+      <ol class="steps">
+        <li><h4>打开 SKILL.md 原文</h4><p>仓库首页点开 <code>SKILL.md</code>，点右上角 <strong>Raw</strong>，全选复制。</p></li>
+        <li><h4>贴给 AI，加一句话</h4><p>粘贴后补一句：<strong>「按上面这份流程帮我做原型，产出可点击的 HTML」</strong>。</p></li>
+      </ol>
+      <p>这样能用上它的方法论，但<strong>用不了配套的模板和校验脚本</strong>（<code>templates/figma-kit.js</code>、<code>scripts/test-html.js</code>），Figma 出口基本做不出来，产出也没人帮你验证。确认好用之后，还是回到方式 A 或 B。</p>
+
+      <hr class="sep">
+
+      <h3>装完自检：30 秒确认成功</h3>
+      <p>新建一个对话，只说三个字：</p>
+      <div class="cmd">
+        <button class="copy" data-copy="画个原型">复制</button>
+        <pre>画个原型</pre>
+      </div>
+      <div class="cmp">
+        <div class="good">
+          <span class="tag">装对了</span>
+          它会先反问你：<strong>产品是什么、谁用、单屏主任务、关键实体</strong>——四个问题，缺哪个问哪个。这说明技能被正确加载了。
+        </div>
+        <div class="bad">
+          <span class="tag">没装对</span>
+          它直接开始编一个页面，或者反问你「你想做什么产品呀」这种开放式问题。说明技能没被识别，检查目录名和位置。
+        </div>
+      </div>
+
+      <h3>以后怎么更新</h3>
+      <p>仓库有更新时，进安装目录拉一次就行：</p>
+      <div class="cmd">
+        <button class="copy" data-copy="cd ~/.workbuddy/skills/product-prototype-generator &amp;&amp; git pull">复制</button>
+        <pre>cd ~/.workbuddy/skills/product-prototype-generator
+git pull</pre>
+      </div>
+      <p>ZIP 方式装的没法这么更新，得重新下载覆盖。</p>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section id="s2">
+      <h2><span class="num">02</span>怎么写需求</h2>
+      <p class="sub">这一节决定产出质量。需求说清楚，返工少一半。</p>
+
+      <p>它只认四件事。你把这四件说全，它就能开工；说漏了，它会先问你——不会硬猜。</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>要素</th><th>要回答什么</th><th>为什么重要</th></tr></thead>
+          <tbody>
+            <tr><td><strong>产品是什么</strong></td><td>一句话说清</td><td>决定它的行业语境和用词</td></tr>
+            <tr><td><strong>谁用</strong></td><td>内部员工，还是普通消费者</td><td><strong>这一句决定整套视觉走向</strong>：后台走紧凑高效，前台走大留白大按钮</td></tr>
+            <tr><td><strong>单屏主任务</strong></td><td>用户进来最想完成的那件事</td><td>决定首屏放什么，防止什么都想放</td></tr>
+            <tr><td><strong>关键实体</strong></td><td>订单、设备、会员、工单……</td><td>页面是由实体生命周期推出来的，不是拍脑袋列的</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>可以直接抄的模板</h3>
+      <div class="cmd">
+        <button class="copy" data-copy="【产品】一句话说明是什么。
+【谁用】内部运维人员 / 普通消费者（二选一，或说明哪几页给谁用）。
+【单屏主任务】用户进来最想完成的那件事，一句话。
+【关键实体】订单、设备、供应商……（列出 2-4 个）。
+【核心流程】从开始到结束经过哪几步，比如：下单 → 审核 → 发货 → 使用 → 归还。
+【必须有的页面】如果有硬性要求就列出来，没有就写「你按流程推」。
+【交付】要可点击的 HTML + Figma 插件 + 规格文档。">复制</button>
+        <pre>【产品】一句话说明是什么。
+【谁用】内部运维人员 / 普通消费者（二选一，或说明哪几页给谁用）。
+【单屏主任务】用户进来最想完成的那件事，一句话。
+【关键实体】订单、设备、供应商……（列出 2-4 个）。
+【核心流程】从开始到结束经过哪几步，比如：下单 → 审核 → 发货 → 使用 → 归还。
+【必须有的页面】如果有硬性要求就列出来，没有就写「你按流程推」。
+【交付】要可点击的 HTML + Figma 插件 + 规格文档。</pre>
+      </div>
+
+      <h3>好坏对照</h3>
+      <div class="cmp">
+        <div class="bad">
+          <span class="tag">✕ 这样问，产出会很空</span>
+          「帮我做一个设备管理系统的原型，要好看一点，功能全面一些。」
+          <p style="margin:10px 0 0;color:#7A5C5C;font-size:12.5px">没有说谁用、没有主任务、没有实体。它只能给你一个「什么都有、什么都用不上」的通用后台。</p>
+        </div>
+        <div class="good">
+          <span class="tag">✓ 这样问，能直接出东西</span>
+          「给客户做一个车载数据迁移的下单系统。客户是外部企业的运维负责人，进来主要看自己订的设备和订单进度。核心实体是订单和设备。流程是：下单选设备数量 → 等待确认 → 运输中 → 使用中 → 归还 → 检测完成。另外要一套运维后台，管设备出入库和订单受理。」
+          <p style="margin:10px 0 0;color:#3D6B5C;font-size:12.5px">四要素齐全，还给了状态链。这种需求能一次出到 11 个页面。</p>
+        </div>
+      </div>
+
+      <div class="note">
+        <p><b>一个省事的技巧：</b>手上有 PRD、需求文档、竞品截图，直接把文件丢给它，再说一句「按这份文档做原型」。它读文档比听你口述准。</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section id="s3">
+      <h2><span class="num">03</span>怎么开口</h2>
+      <p class="sub">三种说法都能触发，不用背咒语。</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>说法</th><th>例子</th><th>适用</th></tr></thead>
+          <tbody>
+            <tr><td><strong>自然描述</strong></td><td>「帮我画个 XX 系统的原型，要能点」</td><td>日常，最省事</td></tr>
+            <tr><td><strong>带触发词</strong></td><td>「出个交互原型」「做个 Figma 稿」「画后台页面」「出个 App 页面」</td><td>想确保它一定被调用</td></tr>
+            <tr><td><strong>直接点名</strong></td><td>「用 product-prototype-generator 做」</td><td>装了多个技能，怕打架</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>它认得的触发词</h4>
+      <p><code>画原型</code> · <code>出个能点的原型</code> · <code>交互原型</code> · <code>Figma 稿</code> · <code>后台页面</code> · <code>App 页面</code> · <code>小程序原型</code></p>
+
+      <div class="warn">
+        <p><b>反过来，这些说法它不会接：</b>「画个图」「做个设计」「帮我美化一下」——太泛，可能触发别的能力。想画原型就把「原型」两个字说出来。</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section id="s4">
+      <h2><span class="num">04</span>它怎么干活</h2>
+      <p class="sub">九个阶段，三个必须停下来的卡点。知道流程，你就知道该在什么时候说话。</p>
+
+      <figure>
+        <svg viewBox="0 0 720 208" role="img" aria-label="九阶段流程">
+          <g font-size="10.5" fill="#5A6270">
+            <rect x="4" y="14" width="74" height="46" rx="7" fill="#fff" stroke="#DDE1E7"/><text x="41" y="35" text-anchor="middle" font-weight="600" fill="#16181D" font-size="11">1 需求收口</text><text x="41" y="50" text-anchor="middle" font-size="9.5">brief.md</text>
+            <rect x="86" y="14" width="74" height="46" rx="7" fill="#fff" stroke="#DDE1E7"/><text x="123" y="35" text-anchor="middle" font-weight="600" fill="#16181D" font-size="11">2 信息架构</text><text x="123" y="50" text-anchor="middle" font-size="9.5">ia-draft.md</text>
+            <rect x="168" y="14" width="74" height="46" rx="7" fill="#fff" stroke="#DDE1E7"/><text x="205" y="35" text-anchor="middle" font-weight="600" fill="#16181D" font-size="11">3 视觉定轨</text><text x="205" y="50" text-anchor="middle" font-size="9.5">design-plan</text>
+            <rect x="250" y="14" width="74" height="46" rx="7" fill="#FDF4E5" stroke="#E9C68B"/><text x="287" y="35" text-anchor="middle" font-weight="600" fill="#96540A" font-size="11">4 反模板</text><text x="287" y="50" text-anchor="middle" font-size="9.5" fill="#96540A">评审过关</text>
+            <rect x="332" y="14" width="74" height="46" rx="7" fill="#fff" stroke="#DDE1E7"/><text x="369" y="35" text-anchor="middle" font-weight="600" fill="#16181D" font-size="11">5 页面规格</text><text x="369" y="50" text-anchor="middle" font-size="9.5">spec/*.md</text>
+            <rect x="414" y="14" width="74" height="46" rx="7" fill="#E9F4F0" stroke="#79B9A3"/><text x="451" y="35" text-anchor="middle" font-weight="600" fill="#0B6E4F" font-size="11">6 HTML</text><text x="451" y="50" text-anchor="middle" font-size="9.5" fill="#0B6E4F">index.html</text>
+            <rect x="496" y="14" width="74" height="46" rx="7" fill="#E9F4F0" stroke="#79B9A3"/><text x="533" y="35" text-anchor="middle" font-weight="600" fill="#0B6E4F" font-size="11">7 Figma</text><text x="533" y="50" text-anchor="middle" font-size="9.5" fill="#0B6E4F">plugin/</text>
+            <rect x="578" y="14" width="74" height="46" rx="7" fill="#FDF4E5" stroke="#E9C68B"/><text x="615" y="35" text-anchor="middle" font-weight="600" fill="#96540A" font-size="11">8 交付验证</text><text x="615" y="50" text-anchor="middle" font-size="9.5" fill="#96540A">三条全绿</text>
+            <rect x="660" y="14" width="56" height="46" rx="7" fill="#fff" stroke="#DDE1E7"/><text x="688" y="35" text-anchor="middle" font-weight="600" fill="#16181D" font-size="11">9 迭代</text><text x="688" y="50" text-anchor="middle" font-size="9.5">补丁</text>
+          </g>
+          <g stroke="#C9D0D9" stroke-width="1.3" marker-end="url(#ar)">
+            <line x1="78" y1="37" x2="84" y2="37"/><line x1="160" y1="37" x2="166" y2="37"/>
+            <line x1="242" y1="37" x2="248" y2="37"/><line x1="324" y1="37" x2="330" y2="37"/>
+            <line x1="406" y1="37" x2="412" y2="37"/><line x1="488" y1="37" x2="494" y2="37"/>
+            <line x1="570" y1="37" x2="576" y2="37"/><line x1="652" y1="37" x2="658" y2="37"/>
+          </g>
+          <text x="287" y="80" text-anchor="middle" font-size="9.5" fill="#B08A54">没通过 → 只改设计说明，不出图</text>
+          <line x1="287" y1="62" x2="287" y2="70" stroke="#E9C68B" stroke-width="1.2"/>
+          <text x="451" y="80" text-anchor="middle" font-size="9.5" fill="#4E8F79">出口 1</text>
+          <line x1="451" y1="62" x2="451" y2="70" stroke="#79B9A3" stroke-width="1.2"/>
+          <text x="533" y="80" text-anchor="middle" font-size="9.5" fill="#4E8F79">出口 2（可与 6 并行）</text>
+          <line x1="533" y1="62" x2="533" y2="70" stroke="#79B9A3" stroke-width="1.2"/>
+          <text x="615" y="80" text-anchor="middle" font-size="9.5" fill="#B08A54">不通过 → 不算交付</text>
+
+          <rect x="4" y="104" width="712" height="88" rx="9" fill="#F6F7F9" stroke="#E2E6EB"/>
+          <text x="24" y="128" font-size="11" fill="#5A6270">你会在项目目录里看到这些文件，从粗到细：</text>
+          <text x="24" y="152" font-size="11.5" font-family="SF Mono,Menlo,monospace" fill="#16181D">brief.md → ia-draft.md → design-plan.md → spec/ → index.html + figma-plugin/</text>
+          <text x="24" y="176" font-size="10.5" fill="#8A919E">每一步都落在文件上，不是聊完就没了。想改哪一步，改对应文件即可。</text>
+        </svg>
+        <figcaption>九个阶段与三个卡点（4 反模板评审、8 交付验证是硬关卡）</figcaption>
+      </figure>
+
+      <h3>三个你该出声的时刻</h3>
+      <div class="card">
+        <h4>① 它问你四个问题的时候</h4>
+        <p>别嫌烦，这是它在收口。这时候补充一句「哪几页是给内部人用的」，能省掉后面整轮返工。</p>
+      </div>
+      <div class="card">
+        <h4>② 它给出页面清单、还没开始画的时候</h4>
+        <p>这是最后一个低成本改结构的节点。<strong>页面少了现在说，比画完再说便宜十倍。</strong>如果你觉得它多列了一个用不上的页面，直接说删——它有条规则叫「三问答不上就删页」，你可以拿这条要求它。</p>
+      </div>
+      <div class="card">
+        <h4>③ 它说「验证全绿」的时候</h4>
+        <p>意味着它真的点过每个按钮、扫过宽度溢出。这时候产物才可信。</p>
+      </div>
+
+      <div class="note">
+        <p><b>为什么它有时候会「顶」你？</b>它有几条硬规则：没说清需求不推导架构、视觉评审不过不出图、页面规格缺状态和跳转就不进生成、验证没过不算交付。这些不是摆架子，是为了避免你拿到一个点不动的漂亮壳子。</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section id="s5">
+      <h2><span class="num">05</span>产物怎么用</h2>
+      <p class="sub">两个出口，两种用法。都不需要装任何软件。</p>
+
+      <h3>出口 1 · 交互 HTML</h3>
+      <ol class="steps">
+        <li class="active"><h4>双击打开</h4><p>找到 <code>index.html</code>，双击。默认浏览器打开，不需要联网，不需要起服务。</p></li>
+        <li><h4>点着走一遍主流程</h4><p>侧栏切页面，表格行点进详情，按钮触发状态变化——弹窗、Toast、空态都会有反馈。</p></li>
+        <li><h4>发出去</h4><p>就一个文件，微信、飞书、邮件附件都能直接发。<strong>收到的人双击就能看，不用装任何东西。</strong></p></li>
+      </ol>
+      <div class="note">
+        <p><b>演示技巧：</b>投屏时用浏览器的「全屏」（<code>⌃⌘F</code>），再按 <code>⌘+</code> 放大到 125%，会议室后排才看得清。</p>
+      </div>
+
+      <h3>出口 2 · Figma 插件</h3>
+      <p>这个稍微特殊：它不是一张图，而是<strong>一个能在 Figma 里跑的小程序</strong>，跑一次就把画板画出来。</p>
+
+      <ol class="steps">
+        <li><h4>前提：必须用 Figma 桌面端</h4><p>网页版装不了本地插件。没装的话去 figma.com/downloads 下客户端，登录同一个账号。</p></li>
+        <li><h4>新建一个空文件</h4><p>打开桌面端，新建 Design file。建议新建，别在正式稿里跑。</p></li>
+        <li><h4>打开插件导入菜单</h4><p>顶部菜单 <strong>Plugins</strong> → <strong>Development</strong> → <strong>Import plugin from manifest…</strong></p></li>
+        <li><h4>选 manifest.json</h4><p>在文件选择框里找到项目下的 <code>figma-plugin/manifest.json</code>，选中打开。<strong>注意选的是 manifest.json，不是 code.js。</strong></p></li>
+        <li><h4>运行</h4><p>菜单 <strong>Plugins</strong> → <strong>Development</strong> → 找到 <strong>产品原型生成器</strong>，点击运行。几秒钟后画板出现。</p></li>
+      </ol>
+
+      <div class="warn">
+        <p><b>如果你用的是 Figma 免费版（Starter）：</b>可能会弹「The Starter plan only comes with 3 pages」。这是因为免费版最多 3 个页面，插件想新建第 4 个。插件<strong>已经内置了降级处理</strong>——它会改用当前页面承载，照常出图，不用管这个提示。</p>
+      </div>
+
+      <div class="card">
+        <h4>跑完你会看到</h4>
+        <ul>
+          <li><strong>每页一个画板</strong>，1440 宽，图层是原生的 Frame / Text / Shape，能直接改</li>
+          <li><strong>自动布局</strong>已配好，改文案不会把排版撑坏</li>
+          <li><strong>点击连线</strong>已连好，切到 Prototype 面板按播放键就能点着跳</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h4>它做不到什么（说在前面）</h4>
+        <ul>
+          <li><strong>不会生成 <code>.fig</code> 文件</strong>——那是 Figma 的私有二进制格式，没有对外写入接口，任何人都做不到</li>
+          <li><strong>不产出组件</strong>——出的是 Frame 层，要做组件库得自己再封装一遍</li>
+          <li><strong>Figma 里不会「演」逻辑</strong>——点击只能跳转，状态变化要在 HTML 版里看</li>
+        </ul>
+      </div>
+
+      <h3>出口 3 · 规格文档</h3>
+      <p>给开发的那一份。打开顺序就是信息从粗到细的顺序：</p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>文件</th><th>里面是什么</th><th>谁看</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">brief.md</td><td>产品定位、用户、主任务、关键实体</td><td>所有人，先看这个</td></tr>
+            <tr><td class="mono">ia-draft.md</td><td>页面清单 + 每页承接什么动作、送去哪</td><td>产品 / 设计评审</td></tr>
+            <tr><td class="mono">design-plan.md</td><td>视觉走向、色值字号、记忆点</td><td>设计 / 前端</td></tr>
+            <tr><td class="mono">spec/*.md</td><td>逐页：布局、数据、<strong>状态</strong>、<strong>跳转</strong></td><td>开发，写代码就看这个</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section id="s6">
+      <h2><span class="num">06</span>怎么改需求</h2>
+      <p class="sub">改需求有正确姿势。说错一句话，它会把整个原型重画一遍。</p>
+
+      <div class="cmp">
+        <div class="bad">
+          <span class="tag">✕ 不要说</span>
+          「整体再改改，感觉不太对。」
+          <p style="margin:10px 0 0;color:#7A5C5C;font-size:12.5px">它只能整页重做，上一版你满意的细节全丢，而且每次重做结果都不一样。</p>
+        </div>
+        <div class="good">
+          <span class="tag">✓ 要说</span>
+          「订单详情页的设备列表，把状态列挪到数量前面，其他不动。」
+          <p style="margin:10px 0 0;color:#3D6B5C;font-size:12.5px">只动一处，其余原样保留。改十次也不会把整体改乱。</p>
+        </div>
+      </div>
+
+      <h3>三种改动，说法不同</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>改什么</th><th>怎么说</th><th>它会做什么</th></tr></thead>
+          <tbody>
+            <tr><td><strong>改结构</strong><br><span style="color:var(--faint);font-size:12px">加页、删页、改流程</span></td><td>「加一个设备保养记录页，从设备详情进去」</td><td>改规格 → 两个出口同步加</td></tr>
+            <tr><td><strong>改视觉</strong><br><span style="color:var(--faint);font-size:12px">颜色、间距、字号</span></td><td>「主色换成深蓝，卡片圆角从 8 改成 12」</td><td>改 token → 两个出口同步换</td></tr>
+            <tr><td><strong>改文案</strong><br><span style="color:var(--faint);font-size:12px">措辞、标签</span></td><td>「把所有『确认订单』改成『提交订单』」</td><td>只改文字，不动结构</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <p><b>一条经验：</b>一次只说一处改动，改完看一眼再提下一个。比起一口气提十条，这样返工率低得多——因为你能立刻发现哪条理解偏了。</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section id="s7">
+      <h2><span class="num">07</span>常见问题</h2>
+      <p class="sub">装和用的时候最容易卡住的八个点。</p>
+
+      <div class="card">
+        <h4>Q1 说了「画原型」，它没反应／还是自己乱编</h4>
+        <p>先确认装没装对：目录必须是 <code>~/.workbuddy/skills/product-prototype-generator/</code>，里面<strong>直接</strong>有 <code>SKILL.md</code>（不是套一层 <code>product_skills-main/SKILL.md</code>）。再不行就点名调用：「用 product-prototype-generator 这个技能做」。</p>
+      </div>
+
+      <div class="card">
+        <h4>Q2 装完当前对话没生效</h4>
+        <p>技能是<strong>新开对话时加载</strong>的。装完关掉当前窗口，重开一个再说。</p>
+      </div>
+
+      <div class="card">
+        <h4>Q3 HTML 打开是白屏，或者点了没反应</h4>
+        <p>大概率是用文本编辑器在预览。要用<strong>浏览器</strong>打开——右键文件 → 打开方式 → Chrome / Safari。还不行就在对话里说「HTML 打开是白屏」，让它跑一遍验证脚本查原因。</p>
+      </div>
+
+      <div class="card">
+        <h4>Q4 Figma 里找不到 Import plugin from manifest</h4>
+        <p>两个原因：一是你在用<strong>网页版</strong>，必须换桌面端；二是菜单路径找错了，正确路径是 <strong>Plugins → Development →</strong> 最下面那一项。</p>
+      </div>
+
+      <div class="card">
+        <h4>Q5 运行插件报「Starter plan only comes with 3 pages」</h4>
+        <p>免费版 Figma 最多 3 个页面。插件已内置降级：会自动改用当前页面承载，照常出图。<strong>看到这个提示不用管，等几秒画板就出来了。</strong></p>
+      </div>
+
+      <div class="card">
+        <h4>Q6 觉得产出太「模板」，跟别人家撞脸</h4>
+        <p>把这句话丢给它：「跑一遍反模板评审，把设计说明里的产品名换成别的产品，看那段描述还成不成立。」它会自己找出模板化的部分重做。你也可以直接说「这个页面太像通用后台了，给我一个只属于这个业务的细节」。</p>
+      </div>
+
+      <div class="card">
+        <h4>Q7 能直接给我一个 .fig 文件吗</h4>
+        <p><strong>不能。</strong><code>.fig</code> 是 Figma 的私有二进制格式，官方没有开放写入接口，任何工具都生成不了。这个技能给的是「在 Figma 里跑一下就把画板长出来」的插件，效果上等价，但路径不同。有人跟你说能直接生成 <code>.fig</code>，那是在忽悠。</p>
+      </div>
+
+      <div class="card">
+        <h4>Q8 生成的时候要联网吗？数据会不会外泄</h4>
+        <p>画原型这一步是模型在生成内容，跟你平时对话一样。但<strong>生成出来的产物本身完全离线</strong>：HTML 单文件零外链，不请求任何外部资源，断网也能打开；Figma 插件声明了不允许任何网络访问。公司内网环境可以直接用。</p>
+      </div>
+
+      <hr class="sep">
+
+      <h3>团队里怎么推广</h3>
+      <p>最省事的做法：把仓库地址发到群里，让每个人用<strong>方式 A</strong> 自己装一次，一句话搞定，互不干扰。如果希望全组产出风格统一，就走<strong>方式 C</strong> 装进项目仓库，这样大家用的永远是同一版。</p>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section id="s8">
+      <h2><span class="num">08</span>一页速查</h2>
+      <p class="sub">把这页截图存手机，忘了就翻。</p>
+
+      <div class="cheat">
+        <h3>安装（挑一种）</h3>
+        <div class="row"><span>让 AI 装</span><div>「帮我把 <code>github.com/JS-Carrot/product_skills</code> 装成我的用户级 skill，目录名 <code>product-prototype-generator</code>」</div></div>
+        <div class="row"><span>命令行</span><div><code>git clone git@github.com:JS-Carrot/product_skills.git ~/.workbuddy/skills/product-prototype-generator</code></div></div>
+        <div class="row"><span>项目级</span><div>装到 <code>&lt;项目&gt;/.workbuddy/skills/product-prototype-generator</code> 并提交进仓库</div></div>
+        <div class="row"><span>更新</span><div><code>cd ~/.workbuddy/skills/product-prototype-generator &amp;&amp; git pull</code></div></div>
+      </div>
+
+      <div class="cheat">
+        <h3>开工（说清四件事）</h3>
+        <div class="row"><span>产品是什么</span><div>一句话</div></div>
+        <div class="row"><span>谁用</span><div>内部员工 / 普通消费者 ← 决定视觉走向</div></div>
+        <div class="row"><span>主任务</span><div>进来最想完成的那件事</div></div>
+        <div class="row"><span>关键实体</span><div>订单 / 设备 / 会员 / 工单……</div></div>
+        <div class="row"><span>开口</span><div>「画个原型」「出个能点的原型」「做个 Figma 稿」</div></div>
+      </div>
+
+      <div class="cheat">
+        <h3>交付与验收</h3>
+        <div class="row"><span>HTML</span><div>双击 <code>index.html</code> → 浏览器打开 → 点着走</div></div>
+        <div class="row"><span>Figma</span><div>桌面端 → Plugins → Development → Import plugin from manifest… → 选 <code>manifest.json</code></div></div>
+        <div class="row"><span>规格</span><div><code>brief.md</code> → <code>ia-draft.md</code> → <code>design-plan.md</code> → <code>spec/*.md</code></div></div>
+        <div class="row"><span>改需求</span><div>一次说一处：「把 X 改成 Y，其他不动」</div></div>
+      </div>
+
+      <div class="note">
+        <p><b>最后一句：</b>这套东西的价值不在于「自动画图」，而在于<strong>逼你把需求想清楚</strong>。四个问题答不上来，说明需求真的还没到位——这时候任何工具画出来的都是废稿。</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div>产品原型生成器 · 操作手册 · v2.0</div>
+    <div>github.com/JS-Carrot/product_skills · MIT License</div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  // 复制按钮
+  document.querySelectorAll('.copy').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var text = btn.getAttribute('data-copy') || '';
+      var done = function(){
+        var old = btn.textContent;
+        btn.textContent = '已复制'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = old; btn.classList.remove('done'); }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function(){ fallback(text, done); });
+      } else { fallback(text, done); }
+    });
+  });
+  function fallback(text, cb){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); cb(); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  // 目录高亮
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var secs = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  function onScroll(){
+    var y = window.scrollY + 140, idx = 0;
+    for (var i=0;i<secs.length;i++){ if (secs[i] && secs[i].offsetTop <= y) idx = i; }
+    links.forEach(function(a,i){ a.classList.toggle('on', i===idx); });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+</script>
+</body>
+</html>
