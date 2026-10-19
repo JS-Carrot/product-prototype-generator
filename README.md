@@ -91,3 +91,9 @@ examples/
 - **HTML 与 Figma 是两份产物**：逻辑改在 HTML，视觉改在插件，靠同源规格保持一致
 - **Figma 插件不含组件**：输出到 Frame 层，组件化需后续手动或用 variant 二次开发
 - **Figma 原型只能跳转**：不模拟数据变化，状态逻辑只在 HTML 版生效
+
+## License
+
+[MIT](LICENSE) © 2026 JS-Carrot
+
+可自由使用、修改、分发、商用，保留版权声明即可。
