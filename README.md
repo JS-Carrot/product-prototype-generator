@@ -7,11 +7,18 @@
 ## 安装
 
 ```bash
-git clone <repo> ~/.workbuddy/skills/product-prototype-generator
-# 或放进项目的 .agents/skills/ 目录
+# 用户级：所有项目可用
+git clone git@github.com:JS-Carrot/product_skills.git \
+  ~/.workbuddy/skills/product-prototype-generator
+
+# 项目级：仅当前项目可用
+git clone git@github.com:JS-Carrot/product_skills.git \
+  <你的项目>/.workbuddy/skills/product-prototype-generator
 ```
 
-Agent 会自动发现该目录下的 `SKILL.md`。触发方式：直接说「画原型」「出个能点的原型」，或点名 `product-prototype-generator`。
+Agent 会自动发现这两个目录下的 `SKILL.md`。触发方式：直接说「画原型」「出个能点的原型」，或点名 `product-prototype-generator`。
+
+无需安装任何依赖。`scripts/test-html.js` 会用到 `jsdom`，脚本已内置探测，缺失时给出安装命令。
 
 ## 快速开始
 
